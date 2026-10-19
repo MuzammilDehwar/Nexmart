@@ -1,7 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Star, Truck, Check, ShoppingBag, Eye } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Star, Truck, Check, ShoppingBag, Eye, Heart } from 'lucide-react';
+
+const WISHLIST_STORAGE_KEY = 'nexmart_wishlist_v1';
+const WISHLIST_UPDATED_EVENT = 'nexmart:wishlist-updated';
+
+function readWishlistIds(): string[] {
+  try {
+    const raw = window.localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveWishlistIds(ids: string[]) {
+  try {
+    window.localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify([...new Set(ids)]));
+    window.dispatchEvent(new Event(WISHLIST_UPDATED_EVENT));
+  } catch {
+    // Wishlist remains usable for the current render if browser storage is unavailable.
+  }
+}
 
 export interface ProductVariantData {
   id: string;
@@ -47,6 +70,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [isAdded, setIsAdded] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  useEffect(() => {
+    const syncWishlist = () => setIsWishlisted(readWishlistIds().includes(product.id));
+    syncWishlist();
+    window.addEventListener('storage', syncWishlist);
+    window.addEventListener(WISHLIST_UPDATED_EVENT, syncWishlist);
+    return () => {
+      window.removeEventListener('storage', syncWishlist);
+      window.removeEventListener(WISHLIST_UPDATED_EVENT, syncWishlist);
+    };
+  }, [product.id]);
+
+  const toggleWishlist = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const ids = readWishlistIds();
+    const nextIds = ids.includes(product.id)
+      ? ids.filter((id) => id !== product.id)
+      : [...ids, product.id];
+    saveWishlistIds(nextIds);
+    setIsWishlisted(nextIds.includes(product.id));
+  };
 
   const currentVariant = product.variants[selectedVariantIndex] || {
     id: 'default',
@@ -101,6 +146,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </span>
           )}
         </div>
+
+        {/* Persistent Wishlist Toggle */}
+        <button
+          type="button"
+          onClick={toggleWishlist}
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          aria-pressed={isWishlisted}
+          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          className="absolute top-2.5 right-2.5 z-10 rounded-full bg-white/95 p-2 text-slate-700 shadow-sm transition-colors hover:bg-white"
+        >
+          <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
+        </button>
 
         {/* Quick View Button on Hover */}
         {onQuickView && (
