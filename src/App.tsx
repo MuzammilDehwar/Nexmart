@@ -4,11 +4,15 @@
  */
 
 import React, { useState } from 'react';
-import { CartProvider } from './context/CartContext';
+import { CartProvider, useCart } from './context/CartContext';
 import { Navigation } from './components/Navigation';
 import { MvpImplementationView } from './components/MvpImplementationView';
 import { BlueprintView } from './components/BlueprintView';
-import { CustomerPortal } from './components/CustomerPortal';
+import { CustomerHomepage } from './components/nextjs14/CustomerHomepage';
+import { ProductDetailPage } from './components/nextjs14/ProductDetailPage';
+import { CheckoutPage } from './components/nextjs14/CheckoutPage';
+import { CustomerOrdersPage } from './components/nextjs14/CustomerOrdersPage';
+import { CartDrawer } from './components/nextjs14/CartDrawer';
 import { VendorPortal } from './components/VendorPortal';
 import { AdminPortal } from './components/AdminPortal';
 import { SchemaErdViewer } from './components/SchemaErdViewer';
@@ -25,6 +29,11 @@ export default function App() {
 function MainApp() {
   const [activeTab, setActiveTab] = useState<'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema'>('mvp');
   const [hasCopied, setHasCopied] = useState(false);
+  const { setOnNavigateToTab, currentView } = useCart();
+
+  React.useEffect(() => {
+    setOnNavigateToTab(setActiveTab);
+  }, [setOnNavigateToTab]);
 
   const handleExportMarkdown = () => {
     const markdownContent = GENERATE_ENTERPRISE_BLUEPRINT_MARKDOWN();
@@ -71,7 +80,17 @@ function MainApp() {
             />
           )}
 
-          {activeTab === 'customer' && <CustomerPortal />}
+          {activeTab === 'customer' && (
+            <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
+              <div className="bg-white rounded-2xl border border-slate-300 shadow-xl overflow-hidden min-h-[600px]">
+                {currentView === 'home' && <CustomerHomepage />}
+                {currentView === 'product-detail' && <ProductDetailPage />}
+                {currentView === 'checkout' && <CheckoutPage />}
+                {currentView === 'orders' && <CustomerOrdersPage />}
+              </div>
+              <CartDrawer />
+            </div>
+          )}
           {activeTab === 'vendor' && <VendorPortal />}
           {activeTab === 'admin' && <AdminPortal />}
           {activeTab === 'schema' && <SchemaErdViewer />}

@@ -27,6 +27,8 @@ export interface ProductData {
   ratingCount: number;
   primaryImage: string;
   deliveryDays: string;
+  category?: string;
+  categorySlug?: string;
   variants: ProductVariantData[];
 }
 

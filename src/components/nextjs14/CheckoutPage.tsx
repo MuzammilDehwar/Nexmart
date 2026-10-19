@@ -24,15 +24,15 @@ export const CheckoutPage: React.FC = () => {
     cartTax,
     cartShipping,
     cartTotal,
-    clearCart,
     setCurrentView,
-    setLastCompletedOrderNumber,
+    placeOrder,
   } = useCart();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [createdOrder, setCreatedOrder] = useState<any | null>(null);
 
   // Step 1: Address Form State
   const [address, setAddress] = useState({
@@ -61,94 +61,126 @@ export const CheckoutPage: React.FC = () => {
     vendorGroups[key].push(item);
   });
 
-  const finalTotal = cartTotal + (shippingMethod === 'express' ? 0 : 0);
+  const finalTotal = cartTotal;
 
   const handlePlaceOrder = () => {
     setIsSubmitting(true);
-    const generatedOrderNum = `NXM-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
     setTimeout(() => {
+      const order = placeOrder(address, paymentMethod);
       setIsSubmitting(false);
       setIsCompleted(true);
-      setOrderNumber(generatedOrderNum);
-      setLastCompletedOrderNumber(generatedOrderNum);
-      clearCart();
-    }, 1200);
+      setOrderNumber(order.id);
+      setCreatedOrder(order);
+    }, 1000);
   };
 
-  if (isCompleted) {
+  if (isCompleted && createdOrder) {
     return (
       <div className="bg-slate-50 min-h-screen text-slate-900 py-12 px-4 md:px-6">
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6 text-center">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
+        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 text-center">
+          
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-inner">
             <Check className="w-8 h-8 stroke-[2.5]" />
           </div>
 
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
-              Payment Authorized & Escrow Partitioned
-            </span>
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold uppercase tracking-wider">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Payment Verified &amp; Escrow Dispatched</span>
+            </div>
             <h1 className="text-2xl md:text-3xl font-bold font-display text-slate-900">
-              Order Confirmed {orderNumber}
+              Order Confirmed!
             </h1>
+            <p className="text-sm font-mono font-bold text-amber-700">
+              Order ID: {createdOrder.id}
+            </p>
             <p className="text-xs text-slate-600 max-w-md mx-auto">
-              Your payment of <strong className="text-slate-900 font-mono">${finalTotal.toFixed(2)}</strong> has been split across {Object.keys(vendorGroups).length || 2} independent seller fulfillment centers.
+              Thank you for your purchase. We have sent a confirmation receipt to <strong>{createdOrder.customerEmail}</strong>.
             </p>
           </div>
 
-          {/* Delivery & Tracking Breakdown */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left space-y-4 text-xs font-mono">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2 text-slate-500 font-semibold">
-              <span>MULTI-VENDOR DISPATCH PACKAGES</span>
-              <span className="text-emerald-700 font-bold">2-DAY PRIORITY SCAN</span>
+          {/* Amazon-Style Order Summary Box */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+                Estimated Delivery
+              </span>
+              <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-[11px]">
+                {createdOrder.vendorPackages[0]?.estimatedDelivery || 'Tomorrow by 8:00 PM'}
+              </span>
             </div>
 
+            {/* Vendor Packages Breakdown */}
             <div className="space-y-3">
-              <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
-                <div className="flex justify-between font-bold text-slate-900">
-                  <span>Package 1: Lumina Audio Labs</span>
-                  <span className="text-blue-700">Tracking: FDX-994812</span>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Items: Aura Sound Pro Headphones · Est. Delivery: Oct 20
-                </p>
-                <div className="text-[10px] text-slate-400">
-                  Escrow Status: Held in Stripe Connect transfer group until delivery scan.
-                </div>
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Multi-Vendor Packages ({createdOrder.vendorPackages.length})
               </div>
 
-              <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
-                <div className="flex justify-between font-bold text-slate-900">
-                  <span>Package 2: Nordic Craft Collective</span>
-                  <span className="text-blue-700">Tracking: DHL-481920</span>
+              {createdOrder.vendorPackages.map((pkg: any, idx: number) => (
+                <div key={pkg.vendorName} className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex justify-between items-center font-bold text-slate-900 text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <Store className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Package {idx + 1}: {pkg.vendorName}</span>
+                    </span>
+                    <span className="text-blue-700 font-mono text-[11px]">
+                      {pkg.trackingNumber}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-600">
+                    {pkg.items.map((i: any) => `${i.product.title} (${i.variant.title}) x${i.quantity}`).join(', ')}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                    <span>Carrier: <strong>{pkg.courier}</strong></span>
+                    <span className="font-mono font-bold text-slate-900">${pkg.subtotal.toFixed(2)}</span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Items: Hygge Arch Smart Luminaire · Est. Delivery: Oct 21
-                </p>
-              </div>
+              ))}
             </div>
 
-            <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-slate-900">
-              <span>Shipping Destination:</span>
-              <span className="text-right text-slate-700">{address.street}, {address.city}, {address.state}</span>
+            {/* Address & Payment Info */}
+            <div className="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+              <div>
+                <span className="text-slate-400 block font-semibold uppercase">Shipping Destination</span>
+                <span className="text-slate-800 font-medium">{createdOrder.shippingAddress.fullName}</span>
+                <span className="text-slate-600 block">{createdOrder.shippingAddress.street}, {createdOrder.shippingAddress.city}, {createdOrder.shippingAddress.state} {createdOrder.shippingAddress.postalCode}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold uppercase">Payment Summary</span>
+                <span className="text-slate-800 font-medium capitalize">{createdOrder.paymentMethod === 'stripe' ? 'Credit Card (Stripe)' : createdOrder.paymentMethod === 'cod' ? 'Cash on Delivery (OTP Verified)' : 'Klarna BNPL'}</span>
+                <span className="text-slate-900 font-mono font-bold block text-xs mt-0.5">Total Paid: ${createdOrder.total.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
+          {/* Action CTAs: Track Order / Continue Shopping / Print */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
-              onClick={() => setCurrentView('home')}
-              className="flex-1 py-3 px-4 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors"
+              onClick={() => setCurrentView('orders')}
+              className="flex-1 py-3 px-5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
-              Return to Marketplace Home
+              <Truck className="w-4 h-4" />
+              <span>Track Order &amp; Shipments</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentView('home')}
+              className="py-3 px-5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors"
+            >
+              Continue Shopping
             </button>
             <button
               onClick={() => window.print()}
               className="py-3 px-4 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
             >
               <Download className="w-4 h-4" />
-              <span>Print Order Receipt</span>
+              <span>Print Receipt</span>
             </button>
           </div>
+
         </div>
       </div>
     );

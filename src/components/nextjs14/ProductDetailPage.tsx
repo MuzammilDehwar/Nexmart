@@ -19,9 +19,9 @@ import {
 } from 'lucide-react';
 
 export const ProductDetailPage: React.FC = () => {
-  const { selectedProductId, addToCart, setCurrentView } = useCart();
+  const { products, selectedProductId, addToCart, setCurrentView } = useCart();
 
-  const product = SAMPLE_NEXTJS_PRODUCTS.find((p) => p.id === selectedProductId) || SAMPLE_NEXTJS_PRODUCTS[0];
+  const product = products.find((p) => p.id === selectedProductId) || products[0];
 
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
