@@ -14,14 +14,13 @@ import {
   Eye, 
   Database, 
   Code2, 
-  ShoppingBag, 
   ExternalLink,
   Layers,
   Sparkles
 } from 'lucide-react';
 
 export const MvpImplementationView: React.FC = () => {
-  const { currentView, setCurrentView, setSelectedProductId, setIsCartDrawerOpen, cartCount } = useCart();
+  const { currentView } = useCart();
   const [activeSubTab, setActiveSubTab] = useState<'preview' | 'prisma' | 'nextjs-code'>('preview');
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [selectedCodeFile, setSelectedCodeFile] = useState<
@@ -627,68 +626,7 @@ export default function VendorAddProduct() {
       {activeSubTab === 'preview' && (
         <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-4">
           
-          {/* Simulated App Router Browser URL Bar */}
-          <div className="bg-slate-900 text-white rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              <span className="text-slate-400 font-mono text-[11px]">Next.js Route:</span>
-              
-              <button
-                onClick={() => setCurrentView('home')}
-                className={`px-2.5 py-1 rounded font-mono font-bold transition-all ${
-                  currentView === 'home'
-                    ? 'bg-amber-400 text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:text-white'
-                }`}
-              >
-                / (Home Storefront)
-              </button>
 
-              <button
-                onClick={() => {
-                  setSelectedProductId('prod-001');
-                  setCurrentView('product-detail');
-                }}
-                className={`px-2.5 py-1 rounded font-mono font-bold transition-all ${
-                  currentView === 'product-detail'
-                    ? 'bg-amber-400 text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:text-white'
-                }`}
-              >
-                /product/prod-001 (PDP)
-              </button>
-
-              <button
-                onClick={() => setCurrentView('checkout')}
-                className={`px-2.5 py-1 rounded font-mono font-bold transition-all ${
-                  currentView === 'checkout'
-                    ? 'bg-amber-400 text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:text-white'
-                }`}
-              >
-                /checkout (3-Step Flow)
-              </button>
-              <button
-                onClick={() => setCurrentView('orders')}
-                className={`px-2.5 py-1 rounded font-mono font-bold transition-all ${
-                  currentView === 'orders'
-                    ? 'bg-amber-400 text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:text-white'
-                }`}
-              >
-                /orders (Shipment Tracking)
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsCartDrawerOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition-colors"
-              >
-                <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
-                <span>Open Cart Drawer ({cartCount})</span>
-              </button>
-            </div>
-          </div>
 
           {/* Active Screen Rendering */}
           <div className="bg-white rounded-2xl border border-slate-300 shadow-xl overflow-hidden min-h-[600px]">
