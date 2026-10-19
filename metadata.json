@@ -1,0 +1,6 @@
+{
+  "name": "NexMart Enterprise Marketplace Blueprint & Prototype",
+  "description": "Comprehensive enterprise architectural blueprint, high-scalability specification, and interactive multi-vendor marketplace experience engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
