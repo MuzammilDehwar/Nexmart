@@ -15,6 +15,7 @@ import { CustomerHomepage } from './components/nextjs14/CustomerHomepage';
 import { ProductDetailPage } from './components/nextjs14/ProductDetailPage';
 import { CheckoutPage } from './components/nextjs14/CheckoutPage';
 import { CustomerOrdersPage } from './components/nextjs14/CustomerOrdersPage';
+import { WishlistPage } from './components/nextjs14/WishlistPage';
 import { CartDrawer } from './components/nextjs14/CartDrawer';
 import { VendorPortal } from './components/VendorPortal';
 import { AdminPortal } from './components/AdminPortal';
@@ -96,6 +97,7 @@ function MainApp() {
                 {currentView === 'product-detail' && <ProductDetailPage />}
                 {currentView === 'checkout' && <CheckoutPage />}
                 {currentView === 'orders' && <CustomerOrdersPage />}
+                {currentView === 'wishlist' && <WishlistPage />}
               </div>
               <CartDrawer />
             </div>
