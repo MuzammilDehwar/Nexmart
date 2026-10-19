@@ -91,6 +91,36 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Demo-only, browser-local persistence. This is not a secure database or a cross-device sync layer.
+const STORAGE_KEYS = {
+  cart: 'nexmart.demo.cart.v1',
+  products: 'nexmart.demo.products.v1',
+  orders: 'nexmart.demo.orders.v1',
+  lastOrder: 'nexmart.demo.lastOrder.v1',
+} as const;
+
+function readStoredValue<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    console.warn(`[Nexmart] Could not read local demo data for ${key}. Using defaults.`, error);
+    return fallback;
+  }
+}
+
+function writeStoredValue<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Storage may be disabled or full; the in-memory app should still work.
+    console.warn(`[Nexmart] Could not save local demo data for ${key}.`, error);
+  }
+}
+
 // Initial Seed Orders so "My Orders" has rich data out of the box
 const INITIAL_ORDERS: Order[] = [
   {
@@ -212,22 +242,33 @@ const INITIAL_ORDERS: Order[] = [
 ];
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<ProductData[]>(SAMPLE_NEXTJS_PRODUCTS);
+  const [products, setProducts] = useState<ProductData[]>(() => readStoredValue(STORAGE_KEYS.products, SAMPLE_NEXTJS_PRODUCTS));
   const [navigateTabFn, setNavigateTabFn] = useState<((tab: any) => void) | undefined>(undefined);
 
-  // Initialize with 1 item for immediate interactive delight
+  // Restore demo cart if available; otherwise retain the original sample cart for first-time visitors.
   const [cart, setCart] = useState<CartItem[]>(() => {
+    const storedCart = readStoredValue<CartItem[] | null>(STORAGE_KEYS.cart, null);
+    if (Array.isArray(storedCart)) return storedCart.filter((item) => item && item.product && item.variant && Number.isFinite(item.quantity) && item.quantity > 0);
     const p1 = SAMPLE_NEXTJS_PRODUCTS[0];
     const v1 = p1.variants[0];
     return [{ product: p1, variant: v1, quantity: 1 }];
   });
 
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const storedOrders = readStoredValue<Order[] | null>(STORAGE_KEYS.orders, null);
+    return Array.isArray(storedOrders) ? storedOrders : INITIAL_ORDERS;
+  });
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string>('prod-001');
-  const [lastCompletedOrderNumber, setLastCompletedOrderNumber] = useState<string | null>(null);
+  const [lastCompletedOrderNumber, setLastCompletedOrderNumber] = useState<string | null>(() => readStoredValue<string | null>(STORAGE_KEYS.lastOrder, null));
   const [marketplaceCommissionRate, setMarketplaceCommissionRate] = useState<number>(0.05); // 5% marketplace commission
+
+  // Persist only demo storefront state on this browser/device. Never store credentials or payment details here.
+  useEffect(() => writeStoredValue(STORAGE_KEYS.cart, cart), [cart]);
+  useEffect(() => writeStoredValue(STORAGE_KEYS.products, products), [products]);
+  useEffect(() => writeStoredValue(STORAGE_KEYS.orders, orders), [orders]);
+  useEffect(() => writeStoredValue(STORAGE_KEYS.lastOrder, lastCompletedOrderNumber), [lastCompletedOrderNumber]);
 
   const addProduct = (newProduct: ProductData) => {
     // New products default to pending review unless pre-approved
