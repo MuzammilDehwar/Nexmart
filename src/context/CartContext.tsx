@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ProductData, ProductVariantData } from '../components/nextjs14/ProductCard';
 import { SAMPLE_NEXTJS_PRODUCTS } from '../components/nextjs14/CustomerHomepage';
+import { 
+  db, 
+  isFirebaseConfigured, 
+  collection, 
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  updateDoc 
+} from '../lib/firebase';
 
 export type OrderStatus = 'Ordered' | 'Packed' | 'Shipped' | 'Delivered';
 
@@ -270,6 +279,53 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => writeStoredValue(STORAGE_KEYS.orders, orders), [orders]);
   useEffect(() => writeStoredValue(STORAGE_KEYS.lastOrder, lastCompletedOrderNumber), [lastCompletedOrderNumber]);
 
+  // Firestore Real-Time Synchronizer for products and orders
+  useEffect(() => {
+    if (!isFirebaseConfigured || !db) return;
+
+    // 1. Synchronize products collection
+    const unsubProducts = onSnapshot(
+      collection(db, 'products'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const remoteProducts = snapshot.docs.map((d) => d.data() as ProductData);
+          setProducts(remoteProducts);
+        } else {
+          // If Firestore is empty, seed initial sample products
+          SAMPLE_NEXTJS_PRODUCTS.forEach(async (p) => {
+            try {
+              if (db) await setDoc(doc(db, 'products', p.id), p);
+            } catch (err) {
+              console.warn('Initial Firestore product seed error:', err);
+            }
+          });
+        }
+      },
+      (err) => {
+        console.warn('Firestore products listener fallback to local cache:', err.message);
+      }
+    );
+
+    // 2. Synchronize orders collection
+    const unsubOrders = onSnapshot(
+      collection(db, 'orders'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const remoteOrders = snapshot.docs.map((d) => d.data() as Order);
+          setOrders(remoteOrders);
+        }
+      },
+      (err) => {
+        console.warn('Firestore orders listener fallback to local cache:', err.message);
+      }
+    );
+
+    return () => {
+      unsubProducts();
+      unsubOrders();
+    };
+  }, []);
+
   const addProduct = (newProduct: ProductData) => {
     // New products default to pending review unless pre-approved
     const productWithStatus: ProductData = {
@@ -277,18 +333,36 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       approvalStatus: newProduct.approvalStatus || 'pending',
     };
     setProducts((prev) => [productWithStatus, ...prev]);
+
+    if (isFirebaseConfigured && db) {
+      setDoc(doc(db, 'products', productWithStatus.id), productWithStatus).catch((err) => {
+        console.warn('Firestore setDoc product error:', err);
+      });
+    }
   };
 
   const approveProduct = (productId: string) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'approved', rejectionReason: undefined } : p))
     );
+
+    if (isFirebaseConfigured && db) {
+      updateDoc(doc(db, 'products', productId), { approvalStatus: 'approved', rejectionReason: null }).catch((err) => {
+        console.warn('Firestore approve product error:', err);
+      });
+    }
   };
 
   const rejectProduct = (productId: string, reason: string = 'Violates platform catalog guidelines') => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'rejected', rejectionReason: reason } : p))
     );
+
+    if (isFirebaseConfigured && db) {
+      updateDoc(doc(db, 'products', productId), { approvalStatus: 'rejected', rejectionReason: reason }).catch((err) => {
+        console.warn('Firestore reject product error:', err);
+      });
+    }
   };
 
   // Dynamic GMV calculations across all platform orders + base volume
@@ -409,6 +483,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setOrders((prev) => [newOrder, ...prev]);
     setLastCompletedOrderNumber(newOrderId);
     clearCart();
+
+    if (isFirebaseConfigured && db) {
+      setDoc(doc(db, 'orders', newOrder.id), newOrder).catch((err) => {
+        console.warn('Firestore setDoc order error:', err);
+      });
+    }
 
     return newOrder;
   };

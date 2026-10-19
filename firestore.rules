@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.email in ['elena@nexmart.internal', 'zaibmd64@gmail.com']
+      );
+    }
+
+    function isVendor() {
+      return isAuthenticated() && (
+        request.auth.token.vendor == true ||
+        request.auth.token.role == 'vendor' ||
+        isAdmin()
+      );
+    }
+
+    // 1. Users Collection
+    // Users can only create/update their own profile.
+    // CRITICAL SECURITY RULE: Clients can NEVER self-grant 'admin' or 'vendor' roles.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) 
+                    && request.resource.data.role == 'customer';
+      allow update: if isOwner(userId) 
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin']);
+      allow delete: if isAdmin();
+    }
+
+    // 2. Vendor Applications
+    // Prospective sellers submit applications with status 'pending'.
+    // Only administrators can review and approve them.
+    match /vendor_applications/{appId} {
+      allow read: if isAuthenticated() && (resource.data.applicantUid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() 
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.applicantUid == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 3. Products Collection
+    // Public read for customer storefront.
+    // Writes restricted exclusively to verified vendors and admins.
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isVendor();
+      allow update: if isVendor();
+      allow delete: if isAdmin();
+    }
+
+    // 4. Orders Collection
+    // Customers create orders; customers can read their own orders; admins can view all.
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (
+        resource.data.customerEmail == request.auth.token.email || 
+        resource.data.customerId == request.auth.uid || 
+        isAdmin() || 
+        isVendor()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isVendor() || isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

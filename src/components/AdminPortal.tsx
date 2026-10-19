@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   ShieldCheck, 
   Split, 
@@ -40,6 +41,8 @@ export const AdminPortal: React.FC = () => {
     onNavigateToTab
   } = useCart();
 
+  const { vendorApplications: authApps, approveVendorApplication } = useAuth();
+
   const [productFilter, setProductFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [moderationToast, setModerationToast] = useState<{ message: string; type: 'success' | 'danger' } | null>(null);
 
@@ -52,24 +55,37 @@ export const AdminPortal: React.FC = () => {
 
   const [simulatedGross, setSimulatedGross] = useState(1439.00);
 
-  const [vendorApplications, setVendorApplications] = useState([
-    {
-      id: 'app-01',
-      brand: 'Komorebi Ceramics',
-      owner: 'Kenji Takahashi',
-      taxId: 'US-EIN-9481920',
-      category: 'Home & Kitchen',
-      status: 'PENDING'
-    },
-    {
-      id: 'app-02',
-      brand: 'Aether Mechanical Keyboards',
-      owner: 'Liam Chen',
-      taxId: 'US-EIN-5519283',
-      category: 'Electronics',
-      status: 'APPROVED'
-    }
-  ]);
+  const [vendorApplications, setVendorApplications] = useState(() => {
+    const base = [
+      {
+        id: 'app-01',
+        brand: 'Komorebi Ceramics',
+        owner: 'Kenji Takahashi',
+        taxId: 'US-EIN-9481920',
+        category: 'Home & Kitchen',
+        status: 'PENDING'
+      },
+      {
+        id: 'app-02',
+        brand: 'Aether Mechanical Keyboards',
+        owner: 'Liam Chen',
+        taxId: 'US-EIN-5519283',
+        category: 'Electronics',
+        status: 'APPROVED'
+      }
+    ];
+
+    const liveConverted = (authApps || []).map(la => ({
+      id: la.id,
+      brand: la.storeName,
+      owner: `${la.applicantName} (${la.applicantEmail})`,
+      taxId: 'IRS-VERIFY-PENDING',
+      category: 'Artisan Goods',
+      status: la.status.toUpperCase()
+    }));
+
+    return [...liveConverted, ...base];
+  });
 
   const [disputes, setDisputes] = useState([
     {
@@ -114,7 +130,13 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleApproveVendor = (id: string) => {
+    approveVendorApplication(id);
     setVendorApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'APPROVED' } : app));
+    setModerationToast({
+      message: 'Vendor application approved! Merchant granted catalog publishing rights.',
+      type: 'success'
+    });
+    setTimeout(() => setModerationToast(null), 3500);
   };
 
   const handleRejectVendor = (id: string) => {

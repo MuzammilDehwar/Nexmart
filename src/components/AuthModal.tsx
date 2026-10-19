@@ -8,10 +8,13 @@ import {
   Store, 
   User as UserIcon, 
   Key, 
-  ArrowRight, 
   Check, 
   Sparkles, 
-  AlertCircle 
+  AlertCircle,
+  Loader2,
+  Info,
+  CheckCircle2,
+  Flame
 } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
@@ -20,81 +23,110 @@ export const AuthModal: React.FC = () => {
     setIsAuthModalOpen,
     authModalMode,
     setAuthModalMode,
-    login,
-    register,
+    loginWithEmail,
+    registerWithEmail,
+    switchRole,
     targetProtectedRole,
     setTargetProtectedRole,
+    isLoadingAuth,
+    authError,
+    clearAuthError,
+    isFirebaseConfigured
   } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('••••••••••');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   // Pre-fill fields if user targeted a specific role
   useEffect(() => {
     if (targetProtectedRole && targetProtectedRole !== 'guest') {
       setSelectedRole(targetProtectedRole);
       setEmail(PRESET_USERS[targetProtectedRole].email);
+      setPassword('password123');
     }
   }, [targetProtectedRole]);
+
+  useEffect(() => {
+    if (isAuthModalOpen) {
+      setLocalError(null);
+      setSuccessNotice(null);
+      clearAuthError();
+    }
+  }, [isAuthModalOpen, clearAuthError]);
 
   if (!isAuthModalOpen) return null;
 
   const handleClose = () => {
     setIsAuthModalOpen(false);
     setTargetProtectedRole(null);
-    setErrorMsg(null);
+    setLocalError(null);
+    setSuccessNotice(null);
+    clearAuthError();
   };
 
   const handleQuickLogin = (role: UserRole) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      login(PRESET_USERS[role as Exclude<UserRole, 'guest'>].email, role);
-      setIsLoading(false);
-      handleClose();
-    }, 400);
+    switchRole(role);
+    handleClose();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
+    setLocalError(null);
+    setSuccessNotice(null);
+    clearAuthError();
 
-    if (authModalMode === 'login') {
-      if (!email.trim()) {
-        setErrorMsg('Please enter a valid email address');
-        return;
-      }
-      setIsLoading(true);
-      setTimeout(() => {
-        login(email, selectedRole);
-        setIsLoading(false);
+    if (!email.trim()) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setLocalError('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (authModalMode === 'login') {
+        await loginWithEmail(email, password);
         handleClose();
-      }, 500);
-    } else {
-      if (!name.trim()) {
-        setErrorMsg('Please enter your full name');
-        return;
+      } else {
+        if (!name.trim()) {
+          setLocalError('Please enter your full name');
+          setIsSubmitting(false);
+          return;
+        }
+        if (selectedRole === 'vendor' && !storeName.trim()) {
+          setLocalError('Please enter your merchant brand or store name');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const result = await registerWithEmail(name, email, password, selectedRole, storeName);
+        if (result?.message) {
+          setSuccessNotice(result.message);
+          setTimeout(() => {
+            handleClose();
+          }, 1500);
+        } else {
+          handleClose();
+        }
       }
-      if (!email.trim()) {
-        setErrorMsg('Please enter your email address');
-        return;
-      }
-      if (selectedRole === 'vendor' && !storeName.trim()) {
-        setErrorMsg('Please enter your merchant brand or store name');
-        return;
-      }
-      setIsLoading(true);
-      setTimeout(() => {
-        register(name, email, selectedRole, storeName);
-        setIsLoading(false);
-        handleClose();
-      }, 500);
+    } catch (err: any) {
+      setLocalError(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const displayError = localError || authError;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
@@ -111,11 +143,20 @@ export const AuthModal: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base text-white tracking-tight">NexMart ID</h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                  NextAuth.js v5
-                </span>
+                {isFirebaseConfigured ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-amber-400" />
+                    Firebase Auth Live
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                    Hybrid Demo Mode
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-400">Enterprise Unified Identity Provider</p>
+              <p className="text-xs text-slate-400">
+                {isFirebaseConfigured ? 'Secured with Google Firebase Authentication SDK' : 'Enterprise Unified Identity Provider'}
+              </p>
             </div>
           </div>
           <button
@@ -133,7 +174,7 @@ export const AuthModal: React.FC = () => {
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               {targetProtectedRole === 'vendor'
-                ? 'Vendor Central requires seller permissions. Sign in as a Vendor or Admin below.'
+                ? 'Vendor Central requires seller permissions. Sign in as a verified Vendor or Admin below.'
                 : 'Admin Tower requires Super Admin governance credentials to access.'}
             </span>
           </div>
@@ -144,9 +185,9 @@ export const AuthModal: React.FC = () => {
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              1-Click Demo Testing Accounts
+              1-Click Demo Testing Personas
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">Instant Auth</span>
+            <span className="text-[10px] text-slate-400 font-mono">Dev Switcher</span>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -194,7 +235,8 @@ export const AuthModal: React.FC = () => {
             type="button"
             onClick={() => {
               setAuthModalMode('login');
-              setErrorMsg(null);
+              setLocalError(null);
+              clearAuthError();
             }}
             className={`pb-3 text-xs font-bold transition-all border-b-2 mr-6 ${
               authModalMode === 'login'
@@ -202,13 +244,14 @@ export const AuthModal: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Sign In with Credentials
+            Firebase Email Sign In
           </button>
           <button
             type="button"
             onClick={() => {
               setAuthModalMode('register');
-              setErrorMsg(null);
+              setLocalError(null);
+              clearAuthError();
             }}
             className={`pb-3 text-xs font-bold transition-all border-b-2 ${
               authModalMode === 'register'
@@ -216,30 +259,43 @@ export const AuthModal: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Register New Account
+            Create New Account
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{errorMsg}</span>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {displayError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-start gap-2 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <span className="leading-snug">{displayError}</span>
+            </div>
+          )}
+
+          {successNotice && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-start gap-2 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+              <span className="leading-snug">{successNotice}</span>
             </div>
           )}
 
           {/* Role selector for registration or custom sign in */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">
-              {authModalMode === 'login' ? 'Select Target Role' : 'Account Type / Permission Level'}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 block">
+                {authModalMode === 'login' ? 'Target Account Type' : 'Account Type / Desired Portal'}
+              </label>
+              {authModalMode === 'register' && (
+                <span className="text-[10px] text-slate-400 font-mono">RBAC Regulated</span>
+              )}
+            </div>
+
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedRole('customer');
-                  if (authModalMode === 'login') setEmail(PRESET_USERS.customer.email);
+                  if (authModalMode === 'login' && !email) setEmail(PRESET_USERS.customer.email);
                 }}
                 className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all ${
                   selectedRole === 'customer'
@@ -253,7 +309,7 @@ export const AuthModal: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setSelectedRole('vendor');
-                  if (authModalMode === 'login') setEmail(PRESET_USERS.vendor.email);
+                  if (authModalMode === 'login' && !email) setEmail(PRESET_USERS.vendor.email);
                 }}
                 className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all ${
                   selectedRole === 'vendor'
@@ -267,7 +323,7 @@ export const AuthModal: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setSelectedRole('admin');
-                  if (authModalMode === 'login') setEmail(PRESET_USERS.admin.email);
+                  if (authModalMode === 'login' && !email) setEmail(PRESET_USERS.admin.email);
                 }}
                 className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all ${
                   selectedRole === 'admin'
@@ -280,6 +336,25 @@ export const AuthModal: React.FC = () => {
             </div>
           </div>
 
+          {/* RBAC Security Notice (Requirement 7: Prevents self-granting privileged roles) */}
+          {authModalMode === 'register' && selectedRole === 'vendor' && (
+            <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900 flex items-start gap-2">
+              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Vendor RBAC Protocol:</strong> Account is created as Customer with a Vendor Onboarding Application queued in Admin Tower for compliance review.
+              </span>
+            </div>
+          )}
+
+          {authModalMode === 'register' && selectedRole === 'admin' && (
+            <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-lg text-[11px] text-purple-900 flex items-start gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Super Admin Policy:</strong> Governance privileges cannot be self-assigned. Real Admin access requires server-side Custom Claims or authorized platform credentials.
+              </span>
+            </div>
+          )}
+
           {authModalMode === 'register' && (
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Full Name</label>
@@ -289,7 +364,10 @@ export const AuthModal: React.FC = () => {
                   type="text"
                   placeholder="e.g. Julian Vance"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (displayError) setLocalError(null);
+                  }}
                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 />
               </div>
@@ -305,7 +383,10 @@ export const AuthModal: React.FC = () => {
                   type="text"
                   placeholder="e.g. Kyoto Crafts Studio"
                   value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
+                  onChange={(e) => {
+                    setStoreName(e.target.value);
+                    if (displayError) setLocalError(null);
+                  }}
                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
                 />
               </div>
@@ -320,8 +401,12 @@ export const AuthModal: React.FC = () => {
                 type="email"
                 placeholder="name@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (displayError) setLocalError(null);
+                }}
                 className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                required
               />
             </div>
           </div>
@@ -329,19 +414,20 @@ export const AuthModal: React.FC = () => {
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
               <label className="font-semibold text-slate-700">Password</label>
-              {authModalMode === 'login' && (
-                <span className="text-[11px] text-amber-700 hover:text-amber-800 cursor-pointer">
-                  Forgot Password?
-                </span>
-              )}
+              <span className="text-[10px] text-slate-400">Min. 6 characters</span>
             </div>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
                 type="password"
+                placeholder="••••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (displayError) setLocalError(null);
+                }}
                 className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                required
               />
             </div>
           </div>
@@ -349,31 +435,38 @@ export const AuthModal: React.FC = () => {
           {/* Submit button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isSubmitting || isLoadingAuth}
             className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
           >
-            {isLoading ? (
-              <span>Authenticating Session...</span>
+            {isSubmitting || isLoadingAuth ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                <span>
+                  {authModalMode === 'login' ? 'Authenticating with Firebase...' : 'Registering Firebase Account...'}
+                </span>
+              </>
             ) : authModalMode === 'login' ? (
               <>
-                <Key className="w-3.5 h-3.5" />
-                <span>Sign In as {selectedRole.toUpperCase()}</span>
+                <Key className="w-3.5 h-3.5 text-amber-400" />
+                <span>Sign In via Firebase Auth</span>
               </>
             ) : (
               <>
-                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Create &amp; Activate Account</span>
+                <Check className="w-3.5 h-3.5 stroke-[2.5] text-amber-400" />
+                <span>Create &amp; Register Account</span>
               </>
             )}
           </button>
 
-          {/* NextAuth Security Token Footer */}
+          {/* Security & Token Protocol Footer */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
             <span className="flex items-center gap-1 font-mono text-[10px]">
               <Lock className="w-3 h-3 text-emerald-600" />
-              AES-256 JWT Session Token
+              Firebase Auth Session · AES-256
             </span>
-            <span className="text-[10px] text-slate-500">RBAC Enforced</span>
+            <span className="text-[10px] text-slate-500">
+              {isFirebaseConfigured ? 'Live Environment' : 'Demo Mode Active'}
+            </span>
           </div>
         </form>
       </div>

@@ -13,7 +13,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   setActiveTab,
   onExportMarkdown
 }) => {
-  const { role, switchRole, user, setIsAuthModalOpen, setAuthModalMode, logout } = useAuth();
+  const { role, switchRole, user, setIsAuthModalOpen, setAuthModalMode, logout, isLoadingAuth } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Helper for role pill styling
@@ -186,7 +186,12 @@ export const Navigation: React.FC<NavigationProps> = ({
 
           {/* User Profile / Login Button with Dropdown */}
           <div className="relative">
-            {role === 'guest' ? (
+            {isLoadingAuth ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span>Verifying...</span>
+              </div>
+            ) : role === 'guest' ? (
               <button
                 onClick={() => {
                   setAuthModalMode('login');
@@ -234,9 +239,20 @@ export const Navigation: React.FC<NavigationProps> = ({
                   <div className="overflow-hidden">
                     <div className="font-bold text-slate-900 truncate">{user?.name}</div>
                     <div className="text-[11px] text-slate-500 font-mono truncate">{user?.email}</div>
-                    <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold border ${currentBadge.color}`}>
-                      {user?.title || currentBadge.label}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold border ${currentBadge.color}`}>
+                        {user?.title || currentBadge.label}
+                      </span>
+                      {user?.authSource === 'firebase' ? (
+                        <span className="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 py-0.2 rounded font-mono">
+                          Firebase
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.2 rounded font-mono">
+                          Demo
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
