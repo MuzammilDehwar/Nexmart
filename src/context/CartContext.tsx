@@ -62,8 +62,8 @@ interface CartContextType {
   cartShipping: number;
   cartTotal: number;
   // Navigation helper for interactive demo
-  currentView: 'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders';
-  setCurrentView: (view: 'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders') => void;
+  currentView: 'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders' | 'wishlist';
+  setCurrentView: (view: 'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders' | 'wishlist') => void;
   selectedProductId: string;
   setSelectedProductId: (id: string) => void;
   lastCompletedOrderNumber: string | null;
@@ -259,7 +259,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return Array.isArray(storedOrders) ? storedOrders : INITIAL_ORDERS;
   });
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders' | 'wishlist'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string>('prod-001');
   const [lastCompletedOrderNumber, setLastCompletedOrderNumber] = useState<string | null>(() => readStoredValue<string | null>(STORAGE_KEYS.lastOrder, null));
   const [marketplaceCommissionRate, setMarketplaceCommissionRate] = useState<number>(0.05); // 5% marketplace commission
