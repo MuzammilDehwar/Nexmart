@@ -15,7 +15,8 @@ import {
   ArrowUpDown, 
   Check, 
   RotateCcw,
-  Package 
+  Package,
+  Heart
 } from 'lucide-react';
 
 export const SAMPLE_NEXTJS_PRODUCTS: ProductData[] = [
@@ -337,6 +338,16 @@ export const CustomerHomepage: React.FC = () => {
                 <span className="text-[11px] text-slate-400">Deliver to</span>
                 <span className="font-bold text-white">San Francisco 94107</span>
               </div>
+
+              {/* Wishlist Button */}
+              <button
+                onClick={() => setCurrentView('wishlist')}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-700 hover:border-rose-400 rounded-lg text-white font-medium transition-all"
+                title="View saved products"
+              >
+                <Heart className="w-4 h-4 text-rose-400" />
+                <span className="hidden sm:inline">Wishlist</span>
+              </button>
 
               {/* My Orders Button */}
               <button
