@@ -71,6 +71,15 @@ interface CartContextType {
   // Global tab navigation helper for vendor -> storefront jump
   onNavigateToTab?: (tab: 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema') => void;
   setOnNavigateToTab: (fn: (tab: 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema') => void) => void;
+  // Product Moderation & Governance
+  approveProduct: (productId: string) => void;
+  rejectProduct: (productId: string, reason?: string) => void;
+  // Marketplace Commission & Platform GMV
+  marketplaceCommissionRate: number;
+  setMarketplaceCommissionRate: (rate: number) => void;
+  platformGmv: number;
+  platformCommissionEarned: number;
+  vendorPayoutsTotal: number;
   // Order Management
   orders: Order[];
   placeOrder: (
@@ -218,10 +227,35 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentView, setCurrentView] = useState<'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string>('prod-001');
   const [lastCompletedOrderNumber, setLastCompletedOrderNumber] = useState<string | null>(null);
+  const [marketplaceCommissionRate, setMarketplaceCommissionRate] = useState<number>(0.05); // 5% marketplace commission
 
   const addProduct = (newProduct: ProductData) => {
-    setProducts((prev) => [newProduct, ...prev]);
+    // New products default to pending review unless pre-approved
+    const productWithStatus: ProductData = {
+      ...newProduct,
+      approvalStatus: newProduct.approvalStatus || 'pending',
+    };
+    setProducts((prev) => [productWithStatus, ...prev]);
   };
+
+  const approveProduct = (productId: string) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'approved', rejectionReason: undefined } : p))
+    );
+  };
+
+  const rejectProduct = (productId: string, reason: string = 'Violates platform catalog guidelines') => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'rejected', rejectionReason: reason } : p))
+    );
+  };
+
+  // Dynamic GMV calculations across all platform orders + base volume
+  const ordersTotalGross = orders.reduce((sum, ord) => sum + ord.total, 0);
+  const baseHistoricalGmv = 148920.00;
+  const platformGmv = Math.round((baseHistoricalGmv + ordersTotalGross) * 100) / 100;
+  const platformCommissionEarned = Math.round((platformGmv * marketplaceCommissionRate) * 100) / 100;
+  const vendorPayoutsTotal = Math.round((platformGmv - platformCommissionEarned) * 100) / 100;
 
   const addToCart = (productId: string, variantId: string, quantity: number = 1) => {
     const product = products.find((p) => p.id === productId);
@@ -402,6 +436,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         orders,
         placeOrder,
         updateOrderStatus,
+        approveProduct,
+        rejectProduct,
+        marketplaceCommissionRate,
+        setMarketplaceCommissionRate,
+        platformGmv,
+        platformCommissionEarned,
+        vendorPayoutsTotal,
       }}
     >
       {children}

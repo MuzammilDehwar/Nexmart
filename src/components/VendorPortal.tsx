@@ -216,6 +216,7 @@ export const VendorPortal: React.FC = () => {
       deliveryDays,
       category,
       categorySlug: category.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      approvalStatus: 'pending',
       variants: variants.length > 0 ? variants : [
         {
           id: `var-${Date.now()}`,
@@ -230,7 +231,7 @@ export const VendorPortal: React.FC = () => {
       ],
     };
 
-    // 1. Add to global CartContext (which feeds CustomerHomepage and PDP!)
+    // 1. Add to global CartContext (which feeds Admin moderation & Customer store!)
     addProduct(newProductData);
     setCreatedProduct(newProductData);
 
@@ -360,33 +361,46 @@ export const VendorPortal: React.FC = () => {
 
       {/* Published Notification Banner */}
       {createdProduct && (
-        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-emerald-900 shadow-xs">
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-amber-950 shadow-xs">
           <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-              <Check className="w-4 h-4 stroke-[2.5]" />
+            <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 mt-0.5 font-bold shadow-xs">
+              <Sparkles className="w-4 h-4 text-slate-950" />
             </div>
             <div>
-              <h4 className="font-bold text-sm">
-                Product Published Successfully: "{createdProduct.title}"
-              </h4>
-              <p className="text-emerald-700 mt-0.5">
-                Saved with {createdProduct.variants.length} variant SKUs to PostgreSQL. It is now live on the main Storefront!
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-sm text-slate-900">
+                  Product Submitted: "{createdProduct.title}"
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
+                  Pending Admin Approval
+                </span>
+              </div>
+              <p className="text-slate-600 mt-0.5">
+                Saved with {createdProduct.variants.length} variant SKUs to PostgreSQL. It is queued in the <strong>Admin Tower</strong> for catalog verification.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={() => {
+                if (onNavigateToTab) onNavigateToTab('admin');
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg font-bold transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Review in Admin Tower</span>
+            </button>
+            <button
               onClick={() => handleViewInStorefront(createdProduct.id)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold transition-colors"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>View on Storefront</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Preview</span>
             </button>
             <button
               onClick={() => setCreatedProduct(null)}
-              className="px-2.5 py-2 text-emerald-700 hover:text-emerald-900"
+              className="px-2 py-2 text-slate-500 hover:text-slate-700"
             >
               Dismiss
             </button>

@@ -4,8 +4,11 @@
  */
 
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { Navigation } from './components/Navigation';
+import { AuthModal } from './components/AuthModal';
+import { AccessGuard } from './components/AccessGuard';
 import { MvpImplementationView } from './components/MvpImplementationView';
 import { BlueprintView } from './components/BlueprintView';
 import { CustomerHomepage } from './components/nextjs14/CustomerHomepage';
@@ -20,9 +23,11 @@ import { GENERATE_ENTERPRISE_BLUEPRINT_MARKDOWN } from './utils/exportMarkdown';
 
 export default function App() {
   return (
-    <CartProvider>
-      <MainApp />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <MainApp />
+      </CartProvider>
+    </AuthProvider>
   );
 }
 
@@ -30,6 +35,7 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState<'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema'>('mvp');
   const [hasCopied, setHasCopied] = useState(false);
   const { setOnNavigateToTab, currentView } = useCart();
+  const { role } = useAuth();
 
   React.useEffect(() => {
     setOnNavigateToTab(setActiveTab);
@@ -68,6 +74,9 @@ function MainApp() {
           onExportMarkdown={handleExportMarkdown}
         />
 
+        {/* Global Unified Auth Modal (NextAuth Provider simulation) */}
+        <AuthModal />
+
         {/* Main Content Area */}
         <main className="w-full">
           {activeTab === 'mvp' && <MvpImplementationView />}
@@ -91,8 +100,33 @@ function MainApp() {
               <CartDrawer />
             </div>
           )}
-          {activeTab === 'vendor' && <VendorPortal />}
-          {activeTab === 'admin' && <AdminPortal />}
+
+          {/* Protected Route: Vendor Central (Only Vendors and Admins) */}
+          {activeTab === 'vendor' && (
+            role === 'vendor' || role === 'admin' ? (
+              <VendorPortal />
+            ) : (
+              <AccessGuard
+                requiredRole="vendor"
+                title="Vendor Central Access Restricted"
+                description="The Seller Dashboard and inventory management tools are exclusively accessible to verified merchant partners. Please authenticate with seller credentials or use the 1-click test persona."
+              />
+            )
+          )}
+
+          {/* Protected Route: Admin Tower (Only Super Admin) */}
+          {activeTab === 'admin' && (
+            role === 'admin' ? (
+              <AdminPortal />
+            ) : (
+              <AccessGuard
+                requiredRole="admin"
+                title="Super Admin Governance Tower Restricted"
+                description="This control room contains sensitive financial take-rate parameters, Gross Merchandise Value (GMV) escrow ledgers, and merchant product catalog approvals. Super Admin privileges required."
+              />
+            )
+          )}
+
           {activeTab === 'schema' && <SchemaErdViewer />}
         </main>
       </div>

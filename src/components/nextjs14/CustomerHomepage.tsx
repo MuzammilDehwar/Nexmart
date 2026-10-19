@@ -34,6 +34,7 @@ export const SAMPLE_NEXTJS_PRODUCTS: ProductData[] = [
     deliveryDays: 'Tomorrow, Free Express',
     category: 'Audio Hardware',
     categorySlug: 'audio-hardware',
+    approvalStatus: 'approved',
     variants: [
       {
         id: 'var-001',
@@ -72,6 +73,7 @@ export const SAMPLE_NEXTJS_PRODUCTS: ProductData[] = [
     deliveryDays: '2-Day Priority Insured',
     category: 'Watches & Precision',
     categorySlug: 'watches-precision',
+    approvalStatus: 'approved',
     variants: [
       {
         id: 'var-003',
@@ -110,6 +112,7 @@ export const SAMPLE_NEXTJS_PRODUCTS: ProductData[] = [
     deliveryDays: 'Standard 2-3 Days',
     category: 'Interior & Lighting',
     categorySlug: 'interior-lighting',
+    approvalStatus: 'approved',
     variants: [
       {
         id: 'var-005',
@@ -132,11 +135,40 @@ export const SAMPLE_NEXTJS_PRODUCTS: ProductData[] = [
         imageUrl: '/src/assets/images/product_smart_lamp_1792380850295.jpg'
       }
     ]
+  },
+  {
+    id: 'prod-004',
+    title: 'Aether Carbon 75% Custom Mechanical Keyboard with Lubed Gateron Oil Kings',
+    slug: 'aether-carbon-75-mechanical-keyboard',
+    brand: 'Aether Keyboards',
+    storeName: 'Aether Keyboards',
+    storeSlug: 'aether-keyboards',
+    basePrice: 220.00,
+    compareAtPrice: 260.00,
+    ratingAverage: 5.0,
+    ratingCount: 1,
+    primaryImage: '/src/assets/images/product_headphones_studio_1792380849129.jpg',
+    deliveryDays: 'Tomorrow, Free Express',
+    category: 'Electronics & Audio',
+    categorySlug: 'electronics',
+    approvalStatus: 'pending',
+    variants: [
+      {
+        id: 'var-007',
+        sku: 'AET-CRB-01',
+        title: 'Forged Carbon / Dark Slate',
+        colorName: 'Forged Carbon',
+        colorHex: '#1e293b',
+        price: 220.00,
+        inventoryQty: 15,
+        imageUrl: '/src/assets/images/product_headphones_studio_1792380849129.jpg'
+      }
+    ]
   }
 ];
 
 export const CustomerHomepage: React.FC = () => {
-  const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders } = useCart();
+  const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders, onNavigateToTab } = useCart();
   
   // Search & Category state
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -147,6 +179,7 @@ export const CustomerHomepage: React.FC = () => {
   const [minRating, setMinRating] = useState<number>(0);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
+  const [showPending, setShowPending] = useState(false);
 
   // Sorting Option
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating-desc' | 'reviews-desc' | 'name-asc'>('featured');
@@ -239,6 +272,11 @@ export const CustomerHomepage: React.FC = () => {
       if (inStockOnly) {
         const totalStock = prod.variants.reduce((acc, v) => acc + v.inventoryQty, 0);
         if (totalStock <= 0) return false;
+      }
+
+      // Catalog Governance: Only admin-approved products appear live on the Customer Storefront
+      if (prod.approvalStatus && prod.approvalStatus !== 'approved' && !showPending) {
+        return false;
       }
 
       return true;
@@ -369,6 +407,33 @@ export const CustomerHomepage: React.FC = () => {
             </p>
           </div>
         </section>
+
+        {/* Catalog Moderation Status Notice */}
+        {products.some((p) => p.approvalStatus === 'pending') && (
+          <div className="bg-amber-50 border-y border-amber-200 px-4 md:px-6 py-2.5 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>
+                <strong>Catalog Moderation Active:</strong>{' '}
+                {products.filter((p) => p.approvalStatus === 'pending').length} vendor product(s) in review.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowPending(!showPending)}
+                className="px-2.5 py-1 bg-white border border-amber-300 hover:bg-amber-100 rounded text-[11px] font-bold text-amber-900 transition-colors shadow-2xs"
+              >
+                {showPending ? 'Hide Unapproved Items' : 'Preview Unapproved Items'}
+              </button>
+              <button
+                onClick={() => onNavigateToTab && onNavigateToTab('admin')}
+                className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[11px] font-bold transition-colors shadow-2xs"
+              >
+                Open Admin Tower &rarr;
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 2-Column Catalog Layout: Sidebar Left, Grid Right */}
         <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">

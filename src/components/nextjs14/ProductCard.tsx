@@ -29,6 +29,8 @@ export interface ProductData {
   deliveryDays: string;
   category?: string;
   categorySlug?: string;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
+  rejectionReason?: string;
   variants: ProductVariantData[];
 }
 
@@ -83,7 +85,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Badges */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 items-start">
-          {discountPercent > 0 && (
+          {product.approvalStatus === 'pending' && (
+            <span className="bg-amber-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded shadow-xs border border-amber-300">
+              Admin Review Pending
+            </span>
+          )}
+          {product.approvalStatus === 'rejected' && (
+            <span className="bg-red-600 text-white font-bold text-[10px] px-2 py-0.5 rounded shadow-xs">
+              Rejected by Admin
+            </span>
+          )}
+          {discountPercent > 0 && product.approvalStatus !== 'pending' && (
             <span className="bg-rose-600 text-white font-bold text-[10px] px-2 py-0.5 rounded shadow-xs">
               Save {discountPercent}%
             </span>

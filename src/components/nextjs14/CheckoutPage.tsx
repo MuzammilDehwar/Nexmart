@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import { 
@@ -14,7 +12,14 @@ import {
   ChevronRight,
   Clock,
   Zap,
-  Download
+  Download,
+  Smartphone,
+  Sparkles,
+  Percent,
+  CheckCircle2,
+  RefreshCw,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 
 export const CheckoutPage: React.FC = () => {
@@ -26,6 +31,7 @@ export const CheckoutPage: React.FC = () => {
     cartTotal,
     setCurrentView,
     placeOrder,
+    marketplaceCommissionRate,
   } = useCart();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -50,8 +56,21 @@ export const CheckoutPage: React.FC = () => {
 
   // Step 3: Payment Gateway Method
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cod' | 'bnpl'>('stripe');
-  const [codOtp, setCodOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+
+  // Stripe Elements Mock State
+  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
+  const [cardExpiry, setCardExpiry] = useState('12/28');
+  const [cardCvc, setCardCvc] = useState('882');
+  const [cardholderName, setCardholderName] = useState('Julian Vance');
+  const [cardZip, setCardZip] = useState('94111');
+  const [stripeProcessingStep, setStripeProcessingStep] = useState<string | null>(null);
+
+  // Cash on Delivery Automated OTP Simulation State
+  const [codOtpInput, setCodOtpInput] = useState('');
+  const [simulatedOtp, setSimulatedOtp] = useState<string | null>(null);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [showSmsBanner, setShowSmsBanner] = useState(false);
 
   // Group items by vendor
   const vendorGroups: { [storeName: string]: typeof cart } = {};
@@ -63,16 +82,75 @@ export const CheckoutPage: React.FC = () => {
 
   const finalTotal = cartTotal;
 
+  // Platform 5% commission math
+  const commissionPercent = Math.round(marketplaceCommissionRate * 100);
+  const platformCommissionAmount = Math.round(cartSubtotal * marketplaceCommissionRate * 100) / 100;
+  const netVendorPayoutAmount = Math.round((cartSubtotal - platformCommissionAmount) * 100) / 100;
+
+  // Trigger automated SMS OTP simulation
+  const handleSendCodOtp = () => {
+    const code = '849201';
+    setSimulatedOtp(code);
+    setIsOtpSent(true);
+    setShowSmsBanner(true);
+  };
+
+  const handleAutoFillOtp = () => {
+    if (simulatedOtp) {
+      setCodOtpInput(simulatedOtp);
+      setIsOtpVerified(true);
+    }
+  };
+
+  const handleVerifyOtp = (val: string) => {
+    setCodOtpInput(val);
+    if (val.trim() === '849201') {
+      setIsOtpVerified(true);
+    } else {
+      setIsOtpVerified(false);
+    }
+  };
+
+  const handleFillTestCard = () => {
+    setCardNumber('4242 •••• •••• 4242');
+    setCardExpiry('12/28');
+    setCardCvc('882');
+    setCardholderName('Julian Vance');
+    setCardZip('94111');
+  };
+
   const handlePlaceOrder = () => {
+    if (paymentMethod === 'cod' && !isOtpVerified) {
+      return;
+    }
+
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const order = placeOrder(address, paymentMethod);
-      setIsSubmitting(false);
-      setIsCompleted(true);
-      setOrderNumber(order.id);
-      setCreatedOrder(order);
-    }, 1000);
+    if (paymentMethod === 'stripe') {
+      setStripeProcessingStep('Tokenizing Card via Stripe Elements...');
+      setTimeout(() => {
+        setStripeProcessingStep('Stripe 3D Secure 2.0 Challenge (Zero-Friction Authentication)...');
+        setTimeout(() => {
+          setStripeProcessingStep('Splitting 5% Platform Rake into NexMart Escrow Ledger...');
+          setTimeout(() => {
+            const order = placeOrder(address, paymentMethod);
+            setIsSubmitting(false);
+            setStripeProcessingStep(null);
+            setIsCompleted(true);
+            setOrderNumber(order.id);
+            setCreatedOrder(order);
+          }, 600);
+        }, 600);
+      }, 600);
+    } else {
+      setTimeout(() => {
+        const order = placeOrder(address, paymentMethod);
+        setIsSubmitting(false);
+        setIsCompleted(true);
+        setOrderNumber(order.id);
+        setCreatedOrder(order);
+      }, 800);
+    }
   };
 
   if (isCompleted && createdOrder) {
@@ -509,55 +587,198 @@ export const CheckoutPage: React.FC = () => {
                     </button>
                   </div>
 
+                  {/* Stripe Elements / PaymentSheet Mock */}
                   {paymentMethod === 'stripe' && (
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4 text-xs">
                       <div className="flex items-center justify-between font-semibold text-slate-800">
-                        <span>Card Information (Tokenized via Stripe Elements)</span>
-                        <span className="text-[11px] text-emerald-700 font-mono">Zero PCI Liability</span>
+                        <span className="flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Stripe Elements Card PaymentSheet</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleFillTestCard}
+                          className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-semibold text-[10px] flex items-center gap-1 transition-colors"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-600" />
+                          <span>Use Test Card</span>
+                        </button>
                       </div>
-                      <div className="p-3 bg-white rounded-lg border border-slate-300 font-mono text-slate-700 flex items-center justify-between">
-                        <span>•••• •••• •••• 4242</span>
-                        <span className="text-slate-400 text-[11px]">12/28 · CVC 882</span>
+
+                      {/* Card Input Fields Styled like Stripe Elements */}
+                      <div className="space-y-3 bg-white p-3.5 rounded-lg border border-slate-300 shadow-inner">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-600 flex items-center justify-between">
+                            <span>Card Number</span>
+                            <span className="font-mono text-[10px] text-emerald-700 font-bold">VISA / MASTERCARD / AMEX</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              placeholder="4242 4242 4242 4242"
+                              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded font-mono text-slate-800 text-xs font-semibold focus:outline-hidden focus:bg-white focus:border-slate-400"
+                            />
+                            <CreditCard className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-slate-600">Expiration (MM/YY)</label>
+                            <input
+                              type="text"
+                              value={cardExpiry}
+                              onChange={(e) => setCardExpiry(e.target.value)}
+                              placeholder="MM/YY"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded font-mono text-slate-800 text-xs font-semibold focus:outline-hidden focus:bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-slate-600">CVC / CVV</label>
+                            <input
+                              type="text"
+                              value={cardCvc}
+                              onChange={(e) => setCardCvc(e.target.value)}
+                              placeholder="882"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded font-mono text-slate-800 text-xs font-semibold focus:outline-hidden focus:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-slate-600">Cardholder Name</label>
+                            <input
+                              type="text"
+                              value={cardholderName}
+                              onChange={(e) => setCardholderName(e.target.value)}
+                              placeholder="Julian Vance"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs font-medium focus:outline-hidden focus:bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-slate-600">Postal / ZIP Code</label>
+                            <input
+                              type="text"
+                              value={cardZip}
+                              onChange={(e) => setCardZip(e.target.value)}
+                              placeholder="94111"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded font-mono text-slate-800 text-xs font-semibold focus:outline-hidden focus:bg-white"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        Funds are held in platform escrow until each package achieves delivery confirmation.
-                      </p>
+
+                      {/* 3D Secure Status Progress Dialog during Submission */}
+                      {stripeProcessingStep && (
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-300 text-amber-950 flex items-center gap-2.5 animate-pulse">
+                          <RefreshCw className="w-4 h-4 animate-spin text-amber-700 shrink-0" />
+                          <span className="font-semibold text-xs font-mono">{stripeProcessingStep}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                        <span className="flex items-center gap-1 font-mono text-[10px]">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          Stripe Elements AES-256 GCM Tokenized
+                        </span>
+                        <span className="font-mono text-slate-400">pi_3P9x_test</span>
+                      </div>
                     </div>
                   )}
 
                   {paymentMethod === 'bnpl' && (
-                    <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 text-xs text-purple-900 space-y-1">
-                      <div className="font-bold">4 Interest-Free Installments of ${(finalTotal / 4).toFixed(2)}</div>
-                      <p className="text-[11px]">
-                        Due every 2 weeks. Instant approval decision. Zero late fees when paid on time.
+                    <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 text-xs text-purple-900 space-y-2">
+                      <div className="font-bold flex items-center justify-between">
+                        <span>4 Interest-Free Installments of ${(finalTotal / 4).toFixed(2)}</span>
+                        <span className="px-2 py-0.5 bg-purple-200 text-purple-900 rounded text-[10px] font-bold">Klarna Pay in 4</span>
+                      </div>
+                      <p className="text-[11px] text-purple-800">
+                        First installment of ${(finalTotal / 4).toFixed(2)} charged today. Remaining payments scheduled automatically every 14 days. Zero APR.
                       </p>
                     </div>
                   )}
 
+                  {/* Cash on Delivery (COD) with Automated OTP Simulation */}
                   {paymentMethod === 'cod' && (
-                    <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-2">
-                      <div className="font-bold">Phone Verification for Cash on Delivery</div>
-                      <p className="text-[11px]">
-                        We will send an SMS OTP verification to <strong>{address.phone}</strong> before courier dispatch.
+                    <div className="p-4 bg-amber-50/80 rounded-xl border border-amber-300 text-xs text-amber-950 space-y-3">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5 text-amber-900">
+                          <Smartphone className="w-4 h-4 text-amber-700" />
+                          <span>Automated Security OTP Verification for COD</span>
+                        </span>
+                        <span className="px-2 py-0.5 bg-amber-200 text-amber-900 rounded text-[10px] font-mono font-bold">
+                          Anti-Fraud Guard
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        To curb false deliveries, Cash on Delivery orders require an automated SMS security passcode verified against phone number <strong>{address.phone}</strong>.
                       </p>
-                      {!otpSent ? (
+
+                      {/* Automated SMS Push Simulation Banner */}
+                      {showSmsBanner && simulatedOtp && (
+                        <div className="p-3 bg-white rounded-lg border-2 border-amber-400 shadow-md space-y-2 animate-fadeIn">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-900">
+                            <span className="flex items-center gap-1.5">
+                              <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Incoming SMS from NexMart Security</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">Just now</span>
+                          </div>
+                          <div className="bg-slate-100 p-2.5 rounded font-mono text-xs text-slate-800 border border-slate-200">
+                            <span className="text-slate-500">[NexMart Alert]</span> Your order confirmation OTP is{' '}
+                            <strong className="text-amber-800 font-bold text-sm bg-amber-100 px-1 py-0.5 rounded">{simulatedOtp}</strong>. Valid for 10 minutes.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAutoFillOtp}
+                            className="w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded text-xs transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>1-Click Auto-Fill OTP ({simulatedOtp})</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {!isOtpSent ? (
                         <button
                           type="button"
-                          onClick={() => setOtpSent(true)}
-                          className="px-3 py-1.5 bg-amber-600 text-white rounded-md text-[11px] font-semibold"
+                          onClick={handleSendCodOtp}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
                         >
-                          Send SMS OTP Code
+                          <Smartphone className="w-3.5 h-3.5" />
+                          <span>Generate &amp; Send SMS Security OTP Code</span>
                         </button>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Enter 6-digit OTP"
-                            value={codOtp}
-                            onChange={(e) => setCodOtp(e.target.value)}
-                            className="p-1.5 bg-white border border-amber-300 rounded text-xs w-36 font-mono"
-                          />
-                          <span className="text-[11px] text-emerald-700 font-semibold">Code Verified ✓</span>
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-bold text-slate-700 block">
+                            Enter 6-digit SMS Security Code:
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="text"
+                              maxLength={6}
+                              placeholder="e.g. 849201"
+                              value={codOtpInput}
+                              onChange={(e) => handleVerifyOtp(e.target.value)}
+                              className={`p-2 bg-white border rounded-lg text-sm font-mono tracking-widest text-center w-36 font-bold ${
+                                isOtpVerified ? 'border-emerald-500 ring-2 ring-emerald-200 text-emerald-800' : 'border-amber-300'
+                              }`}
+                            />
+                            {isOtpVerified ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Phone Verified ✓</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-amber-800">
+                                Enter code received above
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -566,16 +787,21 @@ export const CheckoutPage: React.FC = () => {
                   {/* Primary Order Submission Button */}
                   <button
                     type="button"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (paymentMethod === 'cod' && !isOtpVerified)}
                     onClick={handlePlaceOrder}
-                    className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
-                      <span>Executing Multi-Vendor Ledger Consensus...</span>
+                      <span className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>{stripeProcessingStep || 'Executing Multi-Vendor Ledger Consensus...'}</span>
+                      </span>
+                    ) : paymentMethod === 'cod' && !isOtpVerified ? (
+                      <span>Complete SMS OTP Verification to Authorize COD</span>
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-                        <span>Authorize Order & Place Escrow (${finalTotal.toFixed(2)})</span>
+                        <span>Authorize Order &amp; Place Escrow (${finalTotal.toFixed(2)})</span>
                       </>
                     )}
                   </button>
@@ -621,7 +847,7 @@ export const CheckoutPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Price Ledger */}
+              {/* Price Ledger & Dynamic Tax Breakdown */}
               <div className="space-y-2 text-xs border-t border-slate-100 pt-3">
                 <div className="flex justify-between text-slate-600">
                   <span>Subtotal</span>
@@ -630,22 +856,70 @@ export const CheckoutPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                  <span>Estimated Sales Tax (8%)</span>
+                  <span>Estimated State &amp; Local Sales Tax (8.0%)</span>
                   <span className="font-mono tabular-nums font-semibold text-slate-900">
                     ${cartTax.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                  <span>Shipping & Packaging</span>
+                  <span>Multi-Vendor Consolidated Shipping</span>
                   <span className="font-mono tabular-nums font-semibold text-emerald-700">
                     Free
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
-                  <span>Total Amount</span>
+                  <span>Total Amount Charged</span>
                   <span className="font-mono tabular-nums text-lg">
                     ${finalTotal.toFixed(2)}
                   </span>
+                </div>
+              </div>
+
+              {/* Multi-Tenant Marketplace Commission & Escrow Breakdown */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+                <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-1.5">
+                  <span className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-slate-700">
+                    <Percent className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Marketplace Payout & Commission Ledger</span>
+                  </span>
+                  <span className="font-mono text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">
+                    {commissionPercent}% Take-Rate
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between text-slate-600">
+                    <span className="flex items-center gap-1">
+                      <span>NexMart Platform Commission ({commissionPercent}%):</span>
+                    </span>
+                    <span className="font-mono font-semibold text-amber-800">
+                      -${platformCommissionAmount.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-700 font-semibold">
+                    <span>Net Vendor Payout (Held in Stripe Escrow):</span>
+                    <span className="font-mono text-emerald-700 font-bold">
+                      ${netVendorPayoutAmount.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Vendor breakdown */}
+                  <div className="pt-1.5 border-t border-slate-200 space-y-1 text-[10px] text-slate-500">
+                    {Object.entries(vendorGroups).map(([vName, vItems]) => {
+                      const vSub = vItems.reduce((acc, i) => acc + i.variant.price * i.quantity, 0);
+                      const vComm = Math.round(vSub * marketplaceCommissionRate * 100) / 100;
+                      const vNet = vSub - vComm;
+                      return (
+                        <div key={vName} className="flex justify-between">
+                          <span className="truncate max-w-[170px]">{vName} (95% net):</span>
+                          <span className="font-mono font-medium text-slate-700">
+                            ${vNet.toFixed(2)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
