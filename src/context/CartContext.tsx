@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 import { ProductData, ProductVariantData } from '../components/nextjs14/ProductCard';
 import { SAMPLE_NEXTJS_PRODUCTS } from '../components/nextjs14/CustomerHomepage';
 import { 
@@ -7,8 +8,10 @@ import {
   collection, 
   doc, 
   setDoc, 
-  onSnapshot, 
-  updateDoc 
+  onSnapshot,
+  updateDoc,
+  query,
+  where
 } from '../lib/firebase';
 
 export type OrderStatus = 'Ordered' | 'Packed' | 'Shipped' | 'Delivered';
@@ -33,6 +36,9 @@ export interface VendorPackage {
 
 export interface Order {
   id: string;
+  customerId?: string;
+  vendorUids?: string[];
+  vendorSlugs?: string[];
   createdAt: string;
   customerName: string;
   customerEmail: string;
@@ -46,6 +52,7 @@ export interface Order {
     phone: string;
   };
   paymentMethod: 'stripe' | 'cod' | 'bnpl';
+  paymentStatus?: 'pending' | 'paid' | 'refunded';
   items: CartItem[];
   subtotal: number;
   tax: number;
@@ -91,6 +98,8 @@ interface CartContextType {
   vendorPayoutsTotal: number;
   // Order Management
   orders: Order[];
+  productSyncState: 'demo' | 'loading' | 'live' | 'empty' | 'permission-denied' | 'offline';
+  orderSyncState: 'demo' | 'signed-out' | 'loading' | 'live' | 'empty' | 'permission-denied' | 'offline';
   placeOrder: (
     shippingAddress: Order['shippingAddress'],
     paymentMethod: 'stripe' | 'cod' | 'bnpl'
@@ -251,6 +260,7 @@ const INITIAL_ORDERS: Order[] = [
 ];
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user: authUser, role: authRole, firebaseUser } = useAuth();
   const [products, setProducts] = useState<ProductData[]>(() => readStoredValue(STORAGE_KEYS.products, SAMPLE_NEXTJS_PRODUCTS));
   const [navigateTabFn, setNavigateTabFn] = useState<((tab: any) => void) | undefined>(undefined);
 
@@ -271,6 +281,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentView, setCurrentView] = useState<'home' | 'product-detail' | 'checkout' | 'order-success' | 'orders' | 'wishlist'>('home');
   const [selectedProductId, setSelectedProductId] = useState<string>('prod-001');
   const [lastCompletedOrderNumber, setLastCompletedOrderNumber] = useState<string | null>(() => readStoredValue<string | null>(STORAGE_KEYS.lastOrder, null));
+  const [productSyncState, setProductSyncState] = useState<CartContextType['productSyncState']>(firebaseUser ? 'loading' : 'demo');
+  const [orderSyncState, setOrderSyncState] = useState<CartContextType['orderSyncState']>(firebaseUser ? 'loading' : 'demo');
   const [marketplaceCommissionRate, setMarketplaceCommissionRate] = useState<number>(0.05); // 5% marketplace commission
 
   // Persist only demo storefront state on this browser/device. Never store credentials or payment details here.
@@ -279,92 +291,122 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => writeStoredValue(STORAGE_KEYS.orders, orders), [orders]);
   useEffect(() => writeStoredValue(STORAGE_KEYS.lastOrder, lastCompletedOrderNumber), [lastCompletedOrderNumber]);
 
-  // Firestore Real-Time Synchronizer for products and orders
+  // Firestore synchronizers deliberately use queries that prove ownership to the rules.
   useEffect(() => {
-    if (!isFirebaseConfigured || !db) return;
+    if (!isFirebaseConfigured || !db) {
+      setProductSyncState('demo');
+      setOrderSyncState('demo');
+      return;
+    }
 
-    // 1. Synchronize products collection
-    const unsubProducts = onSnapshot(
-      collection(db, 'products'),
+    let active = true;
+    setProductSyncState('loading');
+    const mergeProducts = (remoteProducts: ProductData[]) => {
+      if (!active) return;
+      const byId = new Map<string, ProductData>(SAMPLE_NEXTJS_PRODUCTS.map((product) => [product.id, product]));
+      remoteProducts.forEach((product) => byId.set(product.id, product));
+      setProducts(Array.from(byId.values()));
+    };
+    const syncError = (error: { code?: string; message?: string }, kind: 'products' | 'orders') => {
+      const state = error.code === 'permission-denied' ? 'permission-denied' : 'offline';
+      if (kind === 'products') setProductSyncState(state);
+      else setOrderSyncState(state);
+      console.warn(`[NexMart Firebase] ${kind} synchronization ${state}:`, error.message || error.code || error);
+    };
+
+    const unsubPublicProducts = onSnapshot(
+      query(collection(db, 'products'), where('approvalStatus', '==', 'approved')),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const remoteProducts = snapshot.docs.map((d) => d.data() as ProductData);
-          setProducts(remoteProducts);
-        } else {
-          // If Firestore is empty, seed initial sample products
-          SAMPLE_NEXTJS_PRODUCTS.forEach(async (p) => {
-            try {
-              if (db) await setDoc(doc(db, 'products', p.id), p);
-            } catch (err) {
-              console.warn('Initial Firestore product seed error:', err);
-            }
-          });
-        }
+        mergeProducts(snapshot.docs.map((item) => item.data() as ProductData));
+        setProductSyncState(snapshot.empty ? 'empty' : 'live');
       },
-      (err) => {
-        console.warn('Firestore products listener fallback to local cache:', err.message);
-      }
+      (error) => syncError(error, 'products'),
     );
 
-    // 2. Synchronize orders collection
-    const unsubOrders = onSnapshot(
-      collection(db, 'orders'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const remoteOrders = snapshot.docs.map((d) => d.data() as Order);
-          setOrders(remoteOrders);
-        }
-      },
-      (err) => {
-        console.warn('Firestore orders listener fallback to local cache:', err.message);
+    let unsubPrivateProducts = () => {};
+    if (firebaseUser && authRole === 'admin') {
+      unsubPrivateProducts = onSnapshot(
+        collection(db, 'products'),
+        (snapshot) => mergeProducts(snapshot.docs.map((item) => item.data() as ProductData)),
+        (error) => syncError(error, 'products'),
+      );
+    } else if (firebaseUser && authRole === 'vendor') {
+      unsubPrivateProducts = onSnapshot(
+        query(collection(db, 'products'), where('vendorUid', '==', firebaseUser.uid)),
+        (snapshot) => mergeProducts(snapshot.docs.map((item) => item.data() as ProductData)),
+        (error) => syncError(error, 'products'),
+      );
+    }
+
+    let unsubOrders = () => {};
+    if (!firebaseUser) {
+      if (authUser?.authSource !== 'demo') {
+        setOrders([]);
+        setOrderSyncState('signed-out');
+      } else {
+        setOrderSyncState('demo');
       }
-    );
+    } else {
+      setOrderSyncState('loading');
+      const ordersQuery = authRole === 'admin'
+        ? collection(db, 'orders')
+        : authRole === 'vendor'
+          ? query(collection(db, 'orders'), where('vendorUids', 'array-contains', firebaseUser.uid))
+          : query(collection(db, 'orders'), where('customerId', '==', firebaseUser.uid));
+      unsubOrders = onSnapshot(
+        ordersQuery,
+        (snapshot) => {
+          if (!active) return;
+          setOrders(snapshot.docs.map((item) => item.data() as Order));
+          setOrderSyncState(snapshot.empty ? 'empty' : 'live');
+        },
+        (error) => syncError(error, 'orders'),
+      );
+    }
 
     return () => {
-      unsubProducts();
+      active = false;
+      unsubPublicProducts();
+      unsubPrivateProducts();
       unsubOrders();
     };
-  }, []);
-
+  }, [authRole, authUser?.authSource, firebaseUser?.uid]);
   const addProduct = (newProduct: ProductData) => {
-    // New products default to pending review unless pre-approved
     const productWithStatus: ProductData = {
       ...newProduct,
       approvalStatus: newProduct.approvalStatus || 'pending',
     };
-    setProducts((prev) => [productWithStatus, ...prev]);
-
-    if (isFirebaseConfigured && db) {
-      setDoc(doc(db, 'products', productWithStatus.id), productWithStatus).catch((err) => {
-        console.warn('Firestore setDoc product error:', err);
-      });
+    const isDemoSession = !firebaseUser || authUser?.authSource === 'demo';
+    if (isDemoSession) {
+      setProducts((prev) => [productWithStatus, ...prev]);
+    } else if (db && authRole === 'vendor') {
+      setDoc(doc(db, 'products', productWithStatus.id), {
+        ...productWithStatus,
+        vendorUid: firebaseUser.uid,
+        approvalStatus: 'pending',
+      }).catch((err) => console.warn('[NexMart Firebase] product create failed:', err));
     }
   };
 
   const approveProduct = (productId: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'approved', rejectionReason: undefined } : p))
-    );
-
-    if (isFirebaseConfigured && db) {
+    if (!firebaseUser || authUser?.authSource === 'demo') {
+      setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'approved', rejectionReason: undefined } : p)));
+    } else if (db && authRole === 'admin') {
       updateDoc(doc(db, 'products', productId), { approvalStatus: 'approved', rejectionReason: null }).catch((err) => {
-        console.warn('Firestore approve product error:', err);
+        console.warn('[NexMart Firebase] product approval failed:', err);
       });
     }
   };
 
   const rejectProduct = (productId: string, reason: string = 'Violates platform catalog guidelines') => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'rejected', rejectionReason: reason } : p))
-    );
-
-    if (isFirebaseConfigured && db) {
+    if (!firebaseUser || authUser?.authSource === 'demo') {
+      setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'rejected', rejectionReason: reason } : p)));
+    } else if (db && authRole === 'admin') {
       updateDoc(doc(db, 'products', productId), { approvalStatus: 'rejected', rejectionReason: reason }).catch((err) => {
-        console.warn('Firestore reject product error:', err);
+        console.warn('[NexMart Firebase] product rejection failed:', err);
       });
     }
   };
-
   // Dynamic GMV calculations across all platform orders + base volume
   const ordersTotalGross = orders.reduce((sum, ord) => sum + ord.total, 0);
   const baseHistoricalGmv = 148920.00;
@@ -464,13 +506,19 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     });
 
+    const vendorUids = Array.from(new Set(cart.map((item) => item.product.vendorUid).filter((value): value is string => Boolean(value))));
+    const vendorSlugs = Array.from(new Set(vendorPackages.map((pkg) => pkg.vendorSlug).filter(Boolean)));
     const newOrder: Order = {
       id: newOrderId,
+      customerId: firebaseUser?.uid || authUser?.id || 'demo-customer',
+      vendorUids,
+      vendorSlugs,
       createdAt: dateFormatted,
-      customerName: shippingAddress.fullName || 'Julian Vance',
-      customerEmail: 'julian.vance@example.com',
+      customerName: shippingAddress.fullName || authUser?.name || 'Julian Vance',
+      customerEmail: firebaseUser?.email || authUser?.email || 'julian.vance@example.com',
       shippingAddress,
       paymentMethod,
+      paymentStatus: 'pending',
       items: [...cart],
       subtotal: cartSubtotal,
       tax: cartTax,
@@ -484,9 +532,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastCompletedOrderNumber(newOrderId);
     clearCart();
 
-    if (isFirebaseConfigured && db) {
+    if (firebaseUser && db && authUser?.authSource === 'firebase') {
       setDoc(doc(db, 'orders', newOrder.id), newOrder).catch((err) => {
-        console.warn('Firestore setDoc order error:', err);
+        console.warn('[NexMart Firebase] order create failed:', err);
       });
     }
 
@@ -555,6 +603,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         onNavigateToTab: navigateTabFn,
         setOnNavigateToTab: setNavigateTabFn,
         orders,
+        productSyncState,
+        orderSyncState,
         placeOrder,
         updateOrderStatus,
         approveProduct,

@@ -1,0 +1,216 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // GLOBAL DEFAULT-DENY SAFETY NET
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // CORE RBAC & IDENTITY HELPERS
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Trusted Admin Verification:
+    // Requires email verification for email-based whitelist, custom claims, or server DB entry
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email_verified == true && (
+          request.auth.token.email in ['elena@nexmart.internal', 'admin@nexmart.internal', 'zaibmd64@gmail.com']
+        )) ||
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Verified Vendor Verification:
+    // Server-verified custom claim, approved vendor record, or platform administrator
+    function isVerifiedVendor() {
+      return isSignedIn() && (
+        isAdmin() ||
+        request.auth.token.vendor == true ||
+        request.auth.token.role == 'vendor' ||
+        (exists(/databases/$(database)/documents/vendors/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/vendors/$(request.auth.uid)).data.status == 'approved')
+      );
+    }
+
+    // Check if seller owns a specific storefront
+    function isVendorForStore(storeSlug) {
+      return isVerifiedVendor() && (
+        isAdmin() ||
+        request.auth.token.storeSlug == storeSlug ||
+        (exists(/databases/$(database)/documents/vendors/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/vendors/$(request.auth.uid)).data.storeSlug == storeSlug)
+      );
+    }
+
+    // =========================================================================
+    // 1. USERS COLLECTION (/users/{userId})
+    // =========================================================================
+    // - Users can read and update ONLY their own profile (or admins)
+    // - Users must NEVER be able to grant themselves admin or seller privileges
+    // - Blanket listing is forbidden
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if isOwner(userId)
+                    && request.resource.data.id == userId
+                    && request.resource.data.role == 'customer'
+                    && !request.resource.data.keys().hasAny(['isAdmin', 'admin', 'isVendor', 'vendor']);
+
+      allow update: if (isOwner(userId)
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                      'role', 'isAdmin', 'admin', 'isVendor', 'vendor', 'id', 'email'
+                    ]))
+                    || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 2. VENDOR APPLICATIONS (/vendor_applications/{appId})
+    // =========================================================================
+    // - Prospective sellers submit applications with status 'pending'
+    // - Applicants can read only their own application; admins review all
+    // - Only trusted platform admins may approve or reject applications
+    match /vendor_applications/{appId} {
+      allow get: if isSignedIn() && (resource.data.applicantUid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn()
+                    && request.resource.data.applicantUid == request.auth.uid
+                    && request.resource.data.status == 'pending';
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 3. PRODUCTS COLLECTION (/products/{productId})
+    // =========================================================================
+    // - Public product reads allowed ONLY for approved/active products
+    // - Only authorized sellers may create or update products belonging to their store
+    // - Sellers cannot self-approve products (must be 'pending')
+    // - Only trusted admins may approve or reject products
+    match /products/{productId} {
+      allow get: if resource.data.approvalStatus == 'approved'
+                 || (isSignedIn() && (
+                      isAdmin() ||
+                      (isVerifiedVendor() && (resource.data.vendorUid == request.auth.uid || resource.data.storeSlug == request.auth.token.storeSlug))
+                    ));
+
+      allow list: if resource.data.approvalStatus == 'approved'
+                  || (isSignedIn() && (isVerifiedVendor() || isAdmin()));
+
+      allow create: if isVerifiedVendor()
+                    && (request.resource.data.approvalStatus == 'pending' || isAdmin())
+                    && (isAdmin() || request.resource.data.vendorUid == request.auth.uid || request.resource.data.storeSlug == request.auth.token.storeSlug);
+
+      allow update: if isAdmin()
+                    || (
+                      isVerifiedVendor()
+                      && (resource.data.vendorUid == request.auth.uid || resource.data.storeSlug == request.auth.token.storeSlug)
+                      && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approvalStatus', 'rejectionReason', 'id', 'vendorUid'])
+                    );
+
+      allow delete: if isAdmin()
+                    || (isVerifiedVendor() && resource.data.vendorUid == request.auth.uid);
+    }
+
+    // =========================================================================
+    // 4. ORDERS COLLECTION (/orders/{orderId})
+    // =========================================================================
+    // - Customers create orders ONLY for themselves
+    // - Customers CANNOT change payment status, order ownership, totals, or admin-only fields
+    // - Order reads restricted to the customer who owns them and trusted admins
+    // - Vendors may see only their own vendor-specific order packages/items
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.customerEmail == request.auth.token.email ||
+        isAdmin() ||
+        (isVerifiedVendor() && (
+          (resource.data.keys().hasAll(['vendorSlugs']) && resource.data.vendorSlugs.hasAny([request.auth.token.storeSlug])) ||
+          (resource.data.keys().hasAll(['vendorUids']) && resource.data.vendorUids.hasAny([request.auth.uid]))
+        ))
+      );
+
+      allow list: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.customerEmail == request.auth.token.email ||
+        isAdmin()
+      );
+
+      allow create: if isSignedIn()
+                    && (request.resource.data.customerId == request.auth.uid || request.resource.data.customerEmail == request.auth.token.email)
+                    && request.resource.data.total >= 0
+                    && (!request.resource.data.keys().hasAll(['overallStatus']) || request.resource.data.overallStatus == 'Ordered');
+
+      allow update: if isAdmin()
+                    || (
+                      // Vendors updating fulfillment package statuses
+                      isVerifiedVendor() &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vendorPackages', 'overallStatus'])
+                    )
+                    || (
+                      // Customers updating non-critical fields (e.g., shippingAddress)
+                      isSignedIn() &&
+                      (resource.data.customerId == request.auth.uid || resource.data.customerEmail == request.auth.token.email) &&
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'paymentStatus', 'paymentMethod', 'customerId', 'customerEmail',
+                        'total', 'subtotal', 'tax', 'shipping', 'items', 'overallStatus'
+                      ])
+                    );
+
+      allow delete: if isAdmin();
+
+      // Vendor-specific order items subcollection
+      match /packages/{packageId} {
+        allow read: if isSignedIn() && (
+          get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid ||
+          isAdmin() ||
+          (isVerifiedVendor() && (
+            resource.data.vendorSlug == request.auth.token.storeSlug ||
+            resource.data.vendorUid == request.auth.uid
+          ))
+        );
+
+        allow create, update: if isAdmin() || (
+          isVerifiedVendor() && (
+            resource.data.vendorSlug == request.auth.token.storeSlug ||
+            resource.data.vendorUid == request.auth.uid
+          ) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'statusUpdatedAt', 'trackingNumber', 'courier', 'estimatedDelivery'
+          ])
+        );
+
+        allow delete: if isAdmin();
+      }
+    }
+
+    // =========================================================================
+    // 5. PRIVILEGED SERVER ROLES & AUDIT COLLECTIONS
+    // =========================================================================
+    match /admins/{adminUid} {
+      allow read, write: if isAdmin();
+    }
+
+    match /vendors/{vendorUid} {
+      allow read: if isSignedIn() && (request.auth.uid == vendorUid || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}

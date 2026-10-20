@@ -44,6 +44,7 @@ export interface ProductData {
   brand: string;
   storeName: string;
   storeSlug: string;
+  vendorUid?: string;
   basePrice: number;
   compareAtPrice?: number;
   ratingAverage: number;

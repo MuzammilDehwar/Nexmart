@@ -1,66 +1,144 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        request.auth.token.role == 'admin' ||
-        request.auth.token.email in ['elena@nexmart.internal', 'zaibmd64@gmail.com']
+      return isSignedIn() && (
+        (request.auth.token.keys().hasAll(['admin']) && request.auth.token.admin == true) ||
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'admin') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
-    function isVendor() {
-      return isAuthenticated() && (
-        request.auth.token.vendor == true ||
-        request.auth.token.role == 'vendor' ||
-        isAdmin()
+    function isVerifiedVendor() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (request.auth.token.keys().hasAll(['vendor']) && request.auth.token.vendor == true) ||
+        (request.auth.token.keys().hasAll(['role']) && request.auth.token.role == 'vendor') ||
+        (exists(/databases/$(database)/documents/vendors/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/vendors/$(request.auth.uid)).data.status == 'approved')
+      );
+    }
+
+    function ownsVendorData(data) {
+      return isVerifiedVendor() && (
+        (data.keys().hasAll(['vendorUid']) && data.vendorUid == request.auth.uid) ||
+        (data.keys().hasAll(['vendorSlug']) && request.auth.token.keys().hasAll(['storeSlug']) && data.vendorSlug == request.auth.token.storeSlug) ||
+        (data.keys().hasAll(['storeSlug']) && request.auth.token.keys().hasAll(['storeSlug']) && data.storeSlug == request.auth.token.storeSlug)
+      );
+    }
+
+    function isOrderCustomer(data) {
+      return isSignedIn() && data.keys().hasAll(['customerId']) && data.customerId == request.auth.uid;
+    }
+
+    function isOrderVendor(data) {
+      return isVerifiedVendor() && (
+        (data.keys().hasAll(['vendorUids']) && data.vendorUids.hasAny([request.auth.uid])) ||
+        (data.keys().hasAll(['vendorSlugs']) && request.auth.token.keys().hasAll(['storeSlug']) && data.vendorSlugs.hasAny([request.auth.token.storeSlug]))
       );
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isOwner(userId) 
-                    && request.resource.data.role == 'customer';
-      allow update: if isOwner(userId) 
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin']);
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data.id == userId
+                    && request.resource.data.role == 'customer'
+                    && (!request.resource.data.keys().hasAll(['email']) || request.resource.data.email == request.auth.token.email)
+                    && !request.resource.data.keys().hasAny(['isAdmin', 'admin', 'isVendor', 'vendor']);
+      allow update: if isAdmin() || (
+                      isSignedIn()
+                      && request.auth.uid == userId
+                      && request.resource.data.id == resource.data.id
+                      && request.resource.data.role == resource.data.role
+                      && request.resource.data.email == resource.data.email
+                      && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'role', 'isAdmin', 'admin', 'isVendor', 'vendor', 'id', 'email'
+                      ])
+                    );
       allow delete: if isAdmin();
     }
 
     match /vendor_applications/{appId} {
-      allow read: if isAuthenticated() && (resource.data.applicantUid == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() 
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.applicantUid == request.auth.uid;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if isSignedIn() && (resource.data.applicantUid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.applicantUid == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
     }
 
     match /products/{productId} {
-      allow read: if true;
-      allow create: if isVendor();
-      allow update: if isVendor();
-      allow delete: if isAdmin();
+      allow get, list: if resource.data.approvalStatus == 'approved' || isAdmin() || ownsVendorData(resource.data);
+      allow create: if isVerifiedVendor()
+                    && request.resource.data.id == productId
+                    && request.resource.data.vendorUid == request.auth.uid
+                    && request.resource.data.approvalStatus == 'pending';
+      allow update: if isAdmin() || (
+                      ownsVendorData(resource.data)
+                      && request.resource.data.vendorUid == resource.data.vendorUid
+                      && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'approvalStatus', 'rejectionReason', 'id', 'vendorUid', 'storeSlug'
+                      ])
+                    );
+      allow delete: if isAdmin() || ownsVendorData(resource.data);
     }
 
     match /orders/{orderId} {
-      allow read: if isAuthenticated() && (
-        resource.data.customerEmail == request.auth.token.email || 
-        resource.data.customerId == request.auth.uid || 
-        isAdmin() || 
-        isVendor()
-      );
-      allow create: if isAuthenticated();
-      allow update: if isVendor() || isAdmin();
+      allow get, list: if isOrderCustomer(resource.data) || isOrderVendor(resource.data) || isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.id == orderId
+                    && request.resource.data.customerId == request.auth.uid
+                    && request.resource.data.customerEmail == request.auth.token.email
+                    && request.resource.data.overallStatus == 'Ordered'
+                    && request.resource.data.total >= 0
+                    && (!request.resource.data.keys().hasAll(['paymentStatus']) || request.resource.data.paymentStatus == 'pending')
+                    && !request.resource.data.keys().hasAny(['refundApproved', 'paymentVerified']);
+      allow update: if isAdmin() || (
+                      isOrderCustomer(resource.data)
+                      && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                        'paymentStatus', 'paymentMethod', 'customerId', 'customerEmail',
+                        'total', 'subtotal', 'tax', 'shipping', 'items', 'overallStatus',
+                        'vendorPackages', 'refundStatus', 'refundApproved', 'paymentVerified'
+                      ])
+                    );
       allow delete: if isAdmin();
+
+      match /packages/{packageId} {
+        allow read: if isOrderCustomer(get(/databases/$(database)/documents/orders/$(orderId)).data)
+                    || isAdmin()
+                    || ownsVendorData(resource.data);
+        allow create: if isAdmin() || (
+                        isVerifiedVendor()
+                        && request.resource.data.vendorUid == request.auth.uid
+                        && request.resource.data.status in ['Ordered', 'Packed', 'Shipped', 'Delivered']
+                      );
+        allow update: if isAdmin() || (
+                        ownsVendorData(resource.data)
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'status', 'statusUpdatedAt', 'trackingNumber', 'courier', 'estimatedDelivery'
+                        ])
+                      );
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /admins/{adminUid} {
+      allow read, write: if isAdmin();
+    }
+
+    match /vendors/{vendorUid} {
+      allow read: if isSignedIn() && (request.auth.uid == vendorUid || isAdmin());
+      allow write: if isAdmin();
     }
   }
 }

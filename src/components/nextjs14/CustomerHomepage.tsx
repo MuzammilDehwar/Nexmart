@@ -169,7 +169,7 @@ export const SAMPLE_NEXTJS_PRODUCTS: ProductData[] = [
 ];
 
 export const CustomerHomepage: React.FC = () => {
-  const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders, onNavigateToTab } = useCart();
+  const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders, onNavigateToTab, productSyncState, orderSyncState } = useCart();
   
   // Search & Category state
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -188,6 +188,13 @@ export const CustomerHomepage: React.FC = () => {
   // Mobile Filter Drawer Toggle
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  const syncNotice = productSyncState === 'permission-denied'
+    ? 'Firebase catalog access was denied. Showing the local demo catalogue while rules or claims are configured.'
+    : productSyncState === 'offline'
+      ? 'Firebase catalog is offline. Showing the local demo catalogue.'
+      : orderSyncState === 'permission-denied'
+        ? 'Your Firebase order access was denied. No protected orders are shown.'
+        : null;
   const categories = [
     { id: 'audio', name: 'Audio Hardware', slug: 'audio-hardware', isHot: true },
     { id: 'watches', name: 'Watches & Precision', slug: 'watches-precision' },

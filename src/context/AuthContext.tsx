@@ -79,13 +79,7 @@ export const PRESET_USERS: Record<Exclude<UserRole, 'guest'>, User> = {
 const VENDOR_APPLICATIONS_KEY = 'nexmart_vendor_applications_v1';
 const APPROVED_VENDORS_KEY = 'nexmart_approved_vendors_v1';
 
-// Read designated admin emails from environment or fallback list
-const TRUSTED_ADMIN_EMAILS = [
-  'elena@nexmart.internal',
-  'admin@nexmart.internal',
-  ...(import.meta.env.VITE_ADMIN_EMAILS ? (import.meta.env.VITE_ADMIN_EMAILS as string).split(',').map(e => e.trim().toLowerCase()) : [])
-];
-
+// Real privileged roles come from Firebase Custom Claims or admin-managed records in Firestore rules.
 interface AuthContextType {
   user: User | null;
   role: UserRole;
@@ -173,29 +167,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
 
-      // 2. Check trusted administrator whitelist (configured in server / env)
-      const normalizedEmail = (fbUser.email || '').toLowerCase().trim();
-      if (TRUSTED_ADMIN_EMAILS.includes(normalizedEmail)) {
-        return { role: 'admin' };
-      }
-
-      // 3. Check approved vendor records
-      try {
-        const approvedVendorsStr = localStorage.getItem(APPROVED_VENDORS_KEY);
-        if (approvedVendorsStr) {
-          const approvedVendors: Record<string, { storeName: string; storeSlug: string }> = JSON.parse(approvedVendorsStr);
-          if (approvedVendors[normalizedEmail]) {
-            return {
-              role: 'vendor',
-              storeName: approvedVendors[normalizedEmail].storeName,
-              storeSlug: approvedVendors[normalizedEmail].storeSlug,
-            };
-          }
-        }
-      } catch (e) {
-        console.warn('Error reading approved vendors:', e);
-      }
-
+      // Client-editable localStorage is deliberately not consulted here.
+      // A real Firebase session is privileged only when the server-issued token says so.
       // Default safe role: Customer
       return { role: 'customer' };
     } catch (err) {
@@ -241,19 +214,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       } else {
         setFirebaseUser(null);
-        // Retain or restore demo persona or guest
-        // If the user previously logged out of Firebase, set to guest
-        setUser((prev) => (prev?.authSource === 'firebase' ? null : prev));
-        setRole((prev) => (user?.authSource === 'firebase' ? 'guest' : prev));
+        // Retain a local demo persona, but never leave a real privileged role active after sign-out.
+        setUser((prev) => {
+          if (prev?.authSource === 'firebase') {
+            setRole('guest');
+            return null;
+          }
+          return prev;
+        });
       }
       setIsLoadingAuth(false);
     });
 
     return () => unsubscribe();
-  }, [resolveRoleForFirebaseUser, user?.authSource]);
+  }, [resolveRoleForFirebaseUser]);
 
   // Demo Switcher: allows instant 1-click exploration of roles
   const switchRole = (newRole: UserRole) => {
+    if (firebaseUser) {
+      setAuthError('Demo persona switching is disabled for real Firebase sessions. Roles come from trusted Firebase claims.');
+      return;
+    }
     setRole(newRole);
     if (newRole === 'guest') {
       setUser(null);
@@ -491,7 +472,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Backward-compatibility wrappers
+  // Backward-compatibility wrappers for the local demo persona only.
   const login = (emailInput: string, designatedRole?: UserRole) => {
     const finalRole = designatedRole || (emailInput.includes('lumina') || emailInput.includes('vendor') ? 'vendor' : emailInput.includes('admin') ? 'admin' : 'customer');
     setRole(finalRole);

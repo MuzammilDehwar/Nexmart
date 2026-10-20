@@ -39,7 +39,8 @@ function MainApp() {
   const { role } = useAuth();
 
   React.useEffect(() => {
-    setOnNavigateToTab(setActiveTab);
+    // Wrap the setter so CartContext stores the callback instead of treating it as a state updater.
+    setOnNavigateToTab(() => setActiveTab);
   }, [setOnNavigateToTab]);
 
   const handleExportMarkdown = () => {

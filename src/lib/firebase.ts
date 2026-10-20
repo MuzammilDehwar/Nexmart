@@ -38,6 +38,12 @@ export const firebaseEnvConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string | undefined,
 };
 
+export const missingFirebaseEnvKeys = [
+  ['VITE_FIREBASE_API_KEY', firebaseEnvConfig.apiKey],
+  ['VITE_FIREBASE_MESSAGING_SENDER_ID', firebaseEnvConfig.messagingSenderId],
+  ['VITE_FIREBASE_APP_ID', firebaseEnvConfig.appId],
+].filter(([, value]) => !value).map(([key]) => key);
+
 // Check whether legitimate Firebase API key & App ID has been provided
 export const isFirebaseConfigured = Boolean(
   firebaseEnvConfig.apiKey &&

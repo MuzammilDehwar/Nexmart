@@ -1,20 +1,44 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# NexMart Enterprise Marketplace
 
-# Run and deploy your AI Studio app
+NexMart is a React + TypeScript + Vite multi-vendor marketplace prototype with a customer storefront, cart, demo checkout, orders, vendor operations, admin moderation, blueprint documentation, and schema planning views. The supplied catalogue remains available locally when Firebase is not configured or is unreachable.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/5c3ced9e-81fb-48bf-8b89-4b7afb3799e8
+```bash
+npm install
+cp .env.example .env.local
+# Add only the Firebase browser configuration values to .env.local
+npm run dev
+```
 
-## Run Locally
+The development server listens on port 3000. Production checks are:
 
-**Prerequisites:**  Node.js
+```bash
+npm run lint
+npm run build
+npm run test:rules
+```
 
+The emulator suite is available with `npm run test:emulator`; it downloads the Firebase CLI/emulator on demand and requires Java. The suite currently covers 16 Firestore permission cases. The rules are not published automatically.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Firebase configuration
+
+Use the existing Firebase project `nexmart-a6309` and enable Email/Password Authentication. The browser-safe values belong in `.env.local` or the hosting environment using the names in `.env.example`. The Firebase API key is the only value intentionally left as a placeholder because it was not present in the supplied archive. Never add a service-account JSON or private key to the frontend.
+
+Real admin and vendor privileges are resolved from trusted Firebase Custom Claims or admin-managed Firestore records. `VITE_ADMIN_EMAILS` is not used as an authorization mechanism. A secure admin provisioning backend or Firebase Admin SDK deployment is still required to assign those claims; the client cannot safely create them.
+
+## Firestore rules
+
+The final `firestore.rules` uses default-deny behavior. Public catalogue listeners query `approvalStatus == approved`; authenticated customers query `customerId == auth.uid`; verified vendors query `vendorUid == auth.uid` and `vendorUids array-contains auth.uid`; admins use trusted claims/records. Firestore rules must be published manually from the Firebase Console or CLI after review.
+
+The current UI does not use Firebase Storage uploads, so no `storage.rules` file is included. Checkout remains explicitly demo/test: no server-side payment provider or payment verification is implemented.
+
+## Beginner Android setup
+
+1. Open Firebase Console on your phone and select project `nexmart-a6309`.
+2. Open Authentication, choose Sign-in method, and enable Email/Password.
+3. Open Project settings, select the registered Web App, and copy the browser configuration values into `.env.local` or your host settings.
+4. In Firestore Database, review `firestore.rules` and publish it only after checking the ownership fields used by your documents.
+5. Create a real customer account from the app to verify signup/login.
+6. Use a trusted backend/Admin SDK to set `admin: true` or `vendor: true` Custom Claims for privileged test accounts, then sign out and sign in again so the ID token refreshes.
+7. Do not treat the demo persona switcher as real Firebase authorization.
