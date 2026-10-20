@@ -48,6 +48,7 @@ The archive already establishes the design direction, so no new visual direction
 8. Preserve local demo ordering and dashboards when Firebase is absent or the active identity is a demo persona; never write those demo mutations to Firestore.
 9. Validate with typecheck, production build, static rules checks, and emulator tests when Java/Firebase Emulator prerequisites are available. Document any unavailable checks honestly.
 10. Add an Amazon-style guest account entry point with separate Sign in and Create account actions, a concise Firebase-backed auth modal, a browser-safe Firebase Web SDK fallback for the supplied `nexmart-a6309` project, and an initial unauthenticated guest state when Firebase is configured.
+11. Add a deployment gate for Firestore listeners so Auth remains usable without permission-denied noise; enable product/order sync only after the reviewed rules are deployed and `VITE_FIREBASE_ENABLE_FIRESTORE_SYNC=true` is set.
 
 ## Build workflow
 

@@ -2,6 +2,8 @@
 
 NexMart is a React + TypeScript + Vite multi-vendor marketplace prototype with a customer storefront, cart, demo checkout, orders, vendor operations, admin moderation, blueprint documentation, and schema planning views. The supplied catalogue remains available locally when Firebase is not configured or is unreachable.
 
+Firestore listeners are intentionally disabled by default with `VITE_FIREBASE_ENABLE_FIRESTORE_SYNC="false"` until the reviewed `firestore.rules` file is deployed to `nexmart-a6309`; Firebase Email/Password Auth remains active. After deployment, set the flag to `true`, rebuild, and redeploy.
+
 ## Run locally
 
 ```bash

@@ -14,6 +14,8 @@ import {
   where
 } from '../lib/firebase';
 
+const isFirestoreSyncEnabled = import.meta.env.VITE_FIREBASE_ENABLE_FIRESTORE_SYNC === 'true';
+
 export type OrderStatus = 'Ordered' | 'Packed' | 'Shipped' | 'Delivered';
 
 export interface CartItem {
@@ -299,6 +301,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    // Firebase Auth can be used independently from Firestore. Keep listeners disabled
+    // until the reviewed firestore.rules file has been deployed to the same project;
+    // this prevents permission-denied loops and preserves the local catalogue.
+    if (!isFirestoreSyncEnabled) {
+      setProductSyncState('demo');
+      setOrderSyncState(firebaseUser ? 'signed-out' : 'demo');
+      return;
+    }
+
     let active = true;
     setProductSyncState('loading');
     const mergeProducts = (remoteProducts: ProductData[]) => {
@@ -311,7 +322,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const state = error.code === 'permission-denied' ? 'permission-denied' : 'offline';
       if (kind === 'products') setProductSyncState(state);
       else setOrderSyncState(state);
-      console.warn(`[NexMart Firebase] ${kind} synchronization ${state}:`, error.message || error.code || error);
+      console.info(`[NexMart Firebase] ${kind} synchronization ${state}. Check firestore.rules deployment and VITE_FIREBASE_ENABLE_FIRESTORE_SYNC.`, error.message || error.code || error);
     };
 
     const unsubPublicProducts = onSnapshot(

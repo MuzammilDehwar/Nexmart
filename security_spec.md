@@ -187,3 +187,8 @@ The following 12 adversarial payloads demonstrate attacks against NexMart's iden
   }
   ```
 - **Expected Outcome:** `PERMISSION_DENIED` (Only trusted platform administrators may approve vendor applications).
+
+
+## Deployment gate
+
+The client keeps Firestore synchronization disabled until the reviewed rules are deployed. Set `VITE_FIREBASE_ENABLE_FIRESTORE_SYNC=true` only after deploying `firestore.rules` to `nexmart-a6309`. Firebase Authentication is independent and remains available while the gate is false.
