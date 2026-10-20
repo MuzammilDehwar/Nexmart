@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Download, ShieldCheck, Store, User, Lock, LogIn, ChevronDown, Check, Sparkles, LogOut } from 'lucide-react';
+import { Download, Lock, LogIn, ChevronDown, LogOut } from 'lucide-react';
 import { useAuth, UserRole } from '../context/AuthContext';
 
 interface NavigationProps {
-  activeTab: 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema';
-  setActiveTab: (tab: 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema') => void;
+  activeTab: 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema';
+  setActiveTab: (tab: 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema') => void;
   onExportMarkdown: () => void;
 }
 
@@ -13,7 +13,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   setActiveTab,
   onExportMarkdown
 }) => {
-  const { role, switchRole, user, setIsAuthModalOpen, setAuthModalMode, logout, isLoadingAuth } = useAuth();
+  const { role, user, setIsAuthModalOpen, setAuthModalMode, logout, isLoadingAuth } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Helper for role pill styling
@@ -39,7 +39,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         {/* Zone 1: Wordmark */}
         <div className="flex items-center gap-3 shrink-0">
           <button 
-            onClick={() => setActiveTab('mvp')}
+            onClick={() => setActiveTab('customer')}
             className="flex items-center gap-2.5 text-left group"
           >
             <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-bold font-display text-base shadow-sm">
@@ -53,137 +53,21 @@ export const Navigation: React.FC<NavigationProps> = ({
           </button>
         </div>
 
-        {/* Zone 2: Navigation Links with Role Protection Indicators */}
+        {/* Role-scoped navigation: protected links are not rendered for other roles. */}
         <nav className="hidden xl:flex items-center gap-6 text-xs font-semibold text-slate-600">
-          <button
-            onClick={() => setActiveTab('mvp')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
-              activeTab === 'mvp'
-                ? 'text-slate-950 border-amber-500 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Phase 1 MVP Hub
-          </button>
-          <button
-            onClick={() => setActiveTab('customer')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
-              activeTab === 'customer'
-                ? 'text-slate-950 border-slate-900 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Next.js 14 Storefront
-          </button>
-          <button
-            onClick={() => setActiveTab('blueprint')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
-              activeTab === 'blueprint'
-                ? 'text-slate-950 border-slate-900 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Architecture Specs
-          </button>
-          <button
-            onClick={() => setActiveTab('vendor')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'vendor'
-                ? 'text-slate-950 border-amber-500 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Vendor Central</span>
-            {role !== 'vendor' && role !== 'admin' && (
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded font-mono flex items-center gap-0.5" title="Vendor access restricted">
-                <Lock className="w-2.5 h-2.5 text-slate-400" />
-                <span>Seller</span>
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'admin'
-                ? 'text-slate-950 border-purple-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Admin Tower</span>
-            {role !== 'admin' && (
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded font-mono flex items-center gap-0.5" title="Super Admin required">
-                <Lock className="w-2.5 h-2.5 text-slate-400" />
-                <span>Admin</span>
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('schema')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
-              activeTab === 'schema'
-                ? 'text-slate-950 border-slate-900 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Schema Studio
-          </button>
+          <button onClick={() => setActiveTab('customer')} className={`transition-colors whitespace-nowrap py-1 border-b-2 ${activeTab === 'customer' ? 'text-slate-950 border-slate-900 font-bold' : 'border-transparent hover:text-slate-900'}`}>Storefront</button>
+          {role === 'vendor' && <button onClick={() => setActiveTab('vendor')} className={`transition-colors whitespace-nowrap py-1 border-b-2 ${activeTab === 'vendor' ? 'text-slate-950 border-amber-500 font-bold' : 'border-transparent hover:text-slate-900'}`}>Seller Central</button>}
+          {role === 'admin' && <>
+            <button onClick={() => setActiveTab('vendor')} className={`transition-colors whitespace-nowrap py-1 border-b-2 ${activeTab === 'vendor' ? 'text-slate-950 border-amber-500 font-bold' : 'border-transparent hover:text-slate-900'}`}>Seller Central</button>
+            <button onClick={() => setActiveTab('admin')} className={`transition-colors whitespace-nowrap py-1 border-b-2 ${activeTab === 'admin' ? 'text-slate-950 border-purple-600 font-bold' : 'border-transparent hover:text-slate-900'}`}>Admin Tower</button>
+            <button onClick={() => setActiveTab('blueprint')} className={`transition-colors whitespace-nowrap py-1 border-b-2 ${activeTab === 'blueprint' ? 'text-slate-950 border-slate-900 font-bold' : 'border-transparent hover:text-slate-900'}`}>Blueprint</button>
+            <button onClick={() => setActiveTab('schema')} className={`transition-colors whitespace-nowrap py-1 border-b-2 ${activeTab === 'schema' ? 'text-slate-950 border-slate-900 font-bold' : 'border-transparent hover:text-slate-900'}`}>Schema</button>
+          </>}
         </nav>
 
         {/* Zone 3: Demo Role Switcher + Account Identity + Export */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           
-          {/* Quick Demo Role Switcher Bar */}
-          <div className="hidden md:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-semibold">
-            <span className="px-2 text-slate-400 text-[10px] uppercase font-bold flex items-center gap-1 tracking-wider">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              Role:
-            </span>
-            <button
-              onClick={() => switchRole('guest')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                role === 'guest'
-                  ? 'bg-white text-slate-900 font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Test as unauthenticated guest"
-            >
-              Guest
-            </button>
-            <button
-              onClick={() => switchRole('customer')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                role === 'customer'
-                  ? 'bg-sky-600 text-white font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Test as Customer (Julian Vance)"
-            >
-              Customer
-            </button>
-            <button
-              onClick={() => switchRole('vendor')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                role === 'vendor'
-                  ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Test as Vendor (Marcus Thorne - Lumina Audio)"
-            >
-              Seller
-            </button>
-            <button
-              onClick={() => switchRole('admin')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                role === 'admin'
-                  ? 'bg-purple-700 text-white font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Test as Super Admin (Elena Rostova)"
-            >
-              Admin
-            </button>
-          </div>
-
           {/* User Profile / Login Button with Dropdown */}
           <div className="relative">
             {isLoadingAuth ? (
@@ -267,47 +151,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                   </div>
                 </div>
 
-                {/* Quick Switch Links inside dropdown */}
-                <div className="space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 px-1">Switch Persona</div>
-                  <button
-                    onClick={() => {
-                      switchRole('customer');
-                      setIsProfileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left ${
-                      role === 'customer' ? 'bg-sky-50 text-sky-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>Julian Vance (Customer)</span>
-                    {role === 'customer' && <Check className="w-3.5 h-3.5 text-sky-600" />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchRole('vendor');
-                      setIsProfileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left ${
-                      role === 'vendor' ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>Marcus Thorne (Seller)</span>
-                    {role === 'vendor' && <Check className="w-3.5 h-3.5 text-amber-600" />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchRole('admin');
-                      setIsProfileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left ${
-                      role === 'admin' ? 'bg-purple-50 text-purple-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>Elena Rostova (Super Admin)</span>
-                    {role === 'admin' && <Check className="w-3.5 h-3.5 text-purple-600" />}
-                  </button>
-                </div>
-
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                   <button
                     onClick={() => {
@@ -333,66 +176,26 @@ export const Navigation: React.FC<NavigationProps> = ({
             )}
           </div>
 
-          <button
+          {role === 'admin' && <button
             onClick={onExportMarkdown}
             className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Spec</span>
-          </button>
+          </button>}
         </div>
       </div>
 
-      {/* Mobile sub-navigation bar */}
+      {/* Mobile role-scoped navigation */}
       <div className="lg:hidden flex items-center gap-2 px-4 py-2 border-t border-slate-100 overflow-x-auto text-xs bg-slate-50/80">
-        <button
-          onClick={() => setActiveTab('mvp')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'mvp' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-600'
-          }`}
-        >
-          Phase 1 MVP
-        </button>
-        <button
-          onClick={() => setActiveTab('customer')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'customer' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Storefront
-        </button>
-        <button
-          onClick={() => setActiveTab('blueprint')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'blueprint' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Blueprint
-        </button>
-        <button
-          onClick={() => setActiveTab('vendor')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'vendor' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Vendor
-        </button>
-        <button
-          onClick={() => setActiveTab('admin')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'admin' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Admin
-        </button>
-        <button
-          onClick={() => setActiveTab('schema')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'schema' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Schema
-        </button>
+        <button onClick={() => setActiveTab('customer')} className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${activeTab === 'customer' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'}`}>Storefront</button>
+        {role === 'vendor' && <button onClick={() => setActiveTab('vendor')} className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${activeTab === 'vendor' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'}`}>Seller</button>}
+        {role === 'admin' && <>
+          <button onClick={() => setActiveTab('vendor')} className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${activeTab === 'vendor' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'}`}>Seller</button>
+          <button onClick={() => setActiveTab('admin')} className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${activeTab === 'admin' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'}`}>Admin</button>
+          <button onClick={() => setActiveTab('blueprint')} className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${activeTab === 'blueprint' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'}`}>Blueprint</button>
+          <button onClick={() => setActiveTab('schema')} className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${activeTab === 'schema' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'}`}>Schema</button>
+        </>}
       </div>
     </header>
   );

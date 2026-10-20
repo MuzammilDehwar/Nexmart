@@ -25,7 +25,6 @@ export const AuthModal: React.FC = () => {
     setAuthModalMode,
     loginWithEmail,
     registerWithEmail,
-    switchRole,
     targetProtectedRole,
     setTargetProtectedRole,
     isLoadingAuth,
@@ -70,10 +69,7 @@ export const AuthModal: React.FC = () => {
     clearAuthError();
   };
 
-  const handleQuickLogin = (role: UserRole) => {
-    switchRole(role);
-    handleClose();
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,59 +176,6 @@ export const AuthModal: React.FC = () => {
           </div>
         )}
 
-        {!isFirebaseConfigured && (
-        <>
-        {/* 1-Click Quick Demo Switcher Presets */}
-        <div className="bg-slate-50 border-b border-slate-200 px-6 py-3.5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              1-Click Demo Testing Personas
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">Dev Switcher</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('customer')}
-              className="p-2 bg-white rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-xs transition-all text-left group"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <UserIcon className="w-3.5 h-3.5 text-sky-600" />
-                <span>Customer</span>
-              </div>
-              <p className="text-[10px] text-slate-500 truncate mt-0.5">Julian Vance</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('vendor')}
-              className="p-2 bg-white rounded-lg border border-slate-200 hover:border-amber-400 hover:shadow-xs transition-all text-left group"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
-                <Store className="w-3.5 h-3.5 text-amber-600" />
-                <span>Vendor</span>
-              </div>
-              <p className="text-[10px] text-slate-500 truncate mt-0.5">Lumina Audio</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin')}
-              className="p-2 bg-white rounded-lg border border-slate-200 hover:border-purple-400 hover:shadow-xs transition-all text-left group"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900">
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                <span>Super Admin</span>
-              </div>
-              <p className="text-[10px] text-slate-500 truncate mt-0.5">Elena Rostova</p>
-            </button>
-          </div>
-        </div>
-        </>
-        )}
-
         {/* Tab Switcher: Sign In vs Create Account */}
         <div className="flex border-b border-slate-200 px-6 pt-3">
           <button
@@ -295,7 +238,7 @@ export const AuthModal: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -324,20 +267,7 @@ export const AuthModal: React.FC = () => {
               >
                 Vendor (Seller)
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedRole('admin');
-                  if (authModalMode === 'login' && !email) setEmail(PRESET_USERS.admin.email);
-                }}
-                className={`py-2 px-3 rounded-lg border text-xs font-semibold text-center transition-all ${
-                  selectedRole === 'admin'
-                    ? 'border-purple-600 bg-purple-600 text-white shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Super Admin
-              </button>
+
             </div>
           </div>
           )}

@@ -1,30 +1,22 @@
 import React from 'react';
-import { useAuth, UserRole } from '../context/AuthContext';
-import { Lock, ShieldAlert, Store, ShieldCheck, ArrowRight, Sparkles, Key } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Lock, ArrowRight, Key } from 'lucide-react';
 
 interface AccessGuardProps {
   requiredRole: 'vendor' | 'admin';
   title: string;
   description: string;
-  onUnlocked?: () => void;
 }
 
 export const AccessGuard: React.FC<AccessGuardProps> = ({
   requiredRole,
   title,
   description,
-  onUnlocked,
 }) => {
-  const { role, user, switchRole, openAuthModalWithRole } = useAuth();
+  const { role, user, openAuthModalWithRole } = useAuth();
 
   const isVendor = requiredRole === 'vendor';
   const roleTitle = isVendor ? 'Seller (Vendor)' : 'Super Admin';
-  const demoPersonaName = isVendor ? 'Marcus Thorne (Lumina Audio Labs)' : 'Elena Rostova (Chief Marketplace Officer)';
-
-  const handleQuickUnlock = () => {
-    switchRole(requiredRole);
-    if (onUnlocked) onUnlocked();
-  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">
@@ -65,40 +57,10 @@ export const AccessGuard: React.FC<AccessGuardProps> = ({
             </p>
           </div>
 
-          {/* Persona Card */}
-          <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-                {isVendor ? (
-                  <Store className="w-6 h-6 text-amber-600" />
-                ) : (
-                  <ShieldCheck className="w-6 h-6 text-purple-700" />
-                )}
-              </div>
-              <div>
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-                  Recommended Demo Persona
-                </span>
-                <span className="font-bold text-slate-900 text-sm block">
-                  {demoPersonaName}
-                </span>
-                <span className="text-xs text-slate-500">
-                  {isVendor ? 'Authorized vendor account with product creation & catalog rights' : 'Full governance authority over commission splits, escrow, and product moderation'}
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleQuickUnlock}
-              className={`shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all ${
-                isVendor 
-                  ? 'bg-amber-400 hover:bg-amber-500 text-slate-950' 
-                  : 'bg-purple-700 hover:bg-purple-800 text-white'
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>1-Click Switch to {roleTitle}</span>
-            </button>
+          <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5 text-sm text-slate-600">
+            {isVendor
+              ? 'Seller access appears only after your Firebase account is approved and receives a trusted vendor claim. Registration alone does not grant product-upload privileges.'
+              : 'Admin access is restricted to the single platform owner account provisioned with a trusted Firebase admin claim. It cannot be selected or self-assigned in the browser.'}
           </div>
 
           {/* Credentials Alternative */}

@@ -11,7 +11,6 @@ import { RealtimeCommerceProvider } from './context/RealtimeCommerceContext';
 import { Navigation } from './components/Navigation';
 import { AuthModal } from './components/AuthModal';
 import { AccessGuard } from './components/AccessGuard';
-import { MvpImplementationView } from './components/MvpImplementationView';
 import { BlueprintView } from './components/BlueprintView';
 import { CustomerHomepage } from './components/nextjs14/CustomerHomepage';
 import { ProductDetailPage } from './components/nextjs14/ProductDetailPage';
@@ -40,10 +39,19 @@ export default function App() {
 }
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState<'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema'>('mvp');
+  const [activeTab, setActiveTab] = useState<AppTab>('customer');
   const [hasCopied, setHasCopied] = useState(false);
   const { setOnNavigateToTab, currentView } = useCart();
   const { role } = useAuth();
+
+  React.useEffect(() => {
+    if (role === 'admin') return;
+    if (role === 'vendor') {
+      setActiveTab((current) => current === 'vendor' ? current : 'customer');
+      return;
+    }
+    setActiveTab('customer');
+  }, [role]);
 
   React.useEffect(() => {
     // Wrap the setter so CartContext stores the callback instead of treating it as a state updater.
@@ -88,9 +96,7 @@ function MainApp() {
 
         {/* Main Content Area */}
         <main className="w-full">
-          {activeTab === 'mvp' && <MvpImplementationView />}
-
-          {activeTab === 'blueprint' && (
+          {activeTab === 'blueprint' && role === 'admin' && (
             <BlueprintView
               onNavigateToPrototype={(tab) => setActiveTab(tab as AppTab)}
               onCopyMarkdown={handleCopyMarkdown}
@@ -137,7 +143,7 @@ function MainApp() {
             )
           )}
 
-          {activeTab === 'schema' && <SchemaErdViewer />}
+          {activeTab === 'schema' && role === 'admin' && <SchemaErdViewer />}
         </main>
         {activeTab === 'customer' && <>
           <SmartShoppingAssistant />
@@ -149,33 +155,25 @@ function MainApp() {
       <footer className="border-t border-slate-200 bg-white py-8 px-6 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-900 font-display">NexMart Architecture</span>
+            <span className="font-semibold text-slate-900 font-display">NexMart Marketplace</span>
             <span aria-hidden="true">·</span>
-            <span>Enterprise Multi-Vendor Blueprint</span>
-            <span aria-hidden="true">·</span>
-            <span>Authored for Production Scale</span>
+            <span>Verified commerce, clear ownership</span>
           </div>
 
           <div className="flex items-center gap-6">
-            <button
-              onClick={() => setActiveTab('blueprint')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Blueprint Docs
-            </button>
             <button
               onClick={() => setActiveTab('customer')}
               className="hover:text-slate-900 transition-colors"
             >
               Customer View
             </button>
-            <button
+            {role === 'vendor' && <button
               onClick={() => setActiveTab('vendor')}
               className="hover:text-slate-900 transition-colors"
             >
               Vendor Central
-            </button>
-            <button
+            </button>}
+            {role === 'admin' && <><button
               onClick={() => setActiveTab('admin')}
               className="hover:text-slate-900 transition-colors"
             >
@@ -186,7 +184,7 @@ function MainApp() {
               className="hover:text-slate-900 transition-colors"
             >
               Schema DDL
-            </button>
+            </button></>}
           </div>
         </div>
       </footer>

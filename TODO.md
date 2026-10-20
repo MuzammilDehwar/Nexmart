@@ -104,3 +104,11 @@
 - Per-user notification records must be ownership-scoped; the browser must not self-create payment-success, reward-settlement, referral-cash, SMS, WhatsApp, or privileged notification events.
 - Add strict Firestore rules and static tests for chat threads, messages, notifications, and existing order/package listeners.
 - Keep JazzCash, Easypaisa, bank-transfer verification, COD settlement, SMS/WhatsApp delivery, rewards settlement, referrals, and AI provider calls explicitly behind future server-side adapters with secrets and webhook verification; do not claim these are live until those adapters are configured.
+
+
+## 15. Enforce strict role-based visibility and remove the MVP/code-system surface
+
+- Guests and customers must see only the customer storefront and customer account actions.
+- Only a Firebase-trusted approved vendor claim may reveal Seller Central and product upload controls; seller registration creates an application and does not self-grant vendor privileges.
+- Only the single platform-owner Firebase admin account provisioned with a trusted admin claim may see Admin Tower, Blueprint, Schema, and architecture export controls.
+- Remove client-side persona switching, email-pattern privilege fallback, one-click role unlocks, and the Phase 1 MVP/code-system component and navigation route.

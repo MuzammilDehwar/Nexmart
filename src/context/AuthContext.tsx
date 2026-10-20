@@ -92,9 +92,6 @@ interface AuthContextType {
   authError: string | null;
   isFirebaseConfigured: boolean;
   firebaseUser: FirebaseUser | null;
-  switchRole: (role: UserRole) => void;
-  login: (email: string, role?: UserRole) => void;
-  register: (name: string, email: string, role: UserRole, storeName?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   registerWithEmail: (
     name: string, 
@@ -234,18 +231,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [resolveRoleForFirebaseUser]);
 
   // Demo Switcher: allows instant 1-click exploration of roles
-  const switchRole = (newRole: UserRole) => {
-    if (firebaseUser) {
-      setAuthError('Demo persona switching is disabled for real Firebase sessions. Roles come from trusted Firebase claims.');
-      return;
-    }
-    setRole(newRole);
-    if (newRole === 'guest') {
-      setUser(null);
-    } else {
-      setUser(PRESET_USERS[newRole]);
-    }
-  };
+
 
   // Real Firebase sign in with email and password
   const loginWithEmail = async (emailInput: string, passwordInput: string) => {
@@ -255,11 +241,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!isFirebaseConfigured || !auth) {
       // Graceful fallback when environment variables are not yet provided
       const trimmedEmail = emailInput.trim().toLowerCase();
-      const finalRole: UserRole = trimmedEmail.includes('admin') || trimmedEmail.includes('elena')
-        ? 'admin'
-        : trimmedEmail.includes('vendor') || trimmedEmail.includes('lumina')
-        ? 'vendor'
-        : 'customer';
+      const finalRole: UserRole = 'customer';
 
       setRole(finalRole);
       const base = PRESET_USERS[finalRole];
@@ -473,49 +455,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.warn('Firebase signOut error:', err);
     } finally {
       setFirebaseUser(null);
-      switchRole('guest');
+      setRole('guest');
+      setUser(null);
       setIsLoadingAuth(false);
     }
   };
 
-  // Backward-compatibility wrappers for the local demo persona only.
-  const login = (emailInput: string, designatedRole?: UserRole) => {
-    const finalRole = designatedRole || (emailInput.includes('lumina') || emailInput.includes('vendor') ? 'vendor' : emailInput.includes('admin') ? 'admin' : 'customer');
-    setRole(finalRole);
-    if (finalRole === 'guest') {
-      setUser(null);
-    } else {
-      const base = PRESET_USERS[finalRole];
-      setUser({
-        ...base,
-        email: emailInput || base.email,
-        authSource: 'demo'
-      });
-    }
-    setIsAuthModalOpen(false);
-  };
 
-  const register = (nameInput: string, emailInput: string, newRole: UserRole, storeNameInput?: string) => {
-    const safeRole: UserRole = newRole === 'admin' ? 'customer' : newRole;
-    setRole(safeRole);
-    if (safeRole === 'guest') {
-      setUser(null);
-    } else {
-      setUser({
-        id: `usr-custom-${Date.now().toString().slice(-4)}`,
-        name: nameInput || 'Marketplace Member',
-        email: emailInput,
-        role: safeRole,
-        storeName: safeRole === 'vendor' ? (storeNameInput || 'My Artisan Store') : undefined,
-        storeSlug: safeRole === 'vendor' ? (storeNameInput || 'my-store').toLowerCase().replace(/[^a-z0-9]+/g, '-') : undefined,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-        title: safeRole === 'vendor' ? `Store Owner · ${storeNameInput || 'Artisan Goods'}` : 'Verified Member',
-        joinedDate: 'Just now',
-        authSource: 'demo'
-      });
-    }
-    setIsAuthModalOpen(false);
-  };
 
   const approveVendorApplication = (appId: string) => {
     setVendorApplications(prev => {
@@ -560,9 +506,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         authError,
         isFirebaseConfigured,
         firebaseUser,
-        switchRole,
-        login,
-        register,
         loginWithEmail,
         registerWithEmail,
         logout,

@@ -18,7 +18,7 @@ import {
 const isFirestoreSyncEnabled = import.meta.env.VITE_FIREBASE_ENABLE_FIRESTORE_SYNC === 'true';
 
 export type OrderStatus = 'Ordered' | 'Packed' | 'Shipped' | 'Delivered';
-export type AppTab = 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema';
+export type AppTab = 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema';
 
 export interface CartItem {
   product: ProductData;
