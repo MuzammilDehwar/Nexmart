@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { ProductData, ProductVariantData } from '../components/nextjs14/ProductCard';
-import { SAMPLE_NEXTJS_PRODUCTS } from '../components/nextjs14/CustomerHomepage';
+import { SAMPLE_NEXTJS_PRODUCTS } from '../data/sampleProducts';
 import { 
   db, 
   isFirebaseConfigured, 

@@ -131,7 +131,7 @@ export const AuthModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
       <div 
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col transition-all"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -142,7 +142,7 @@ export const AuthModal: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-white tracking-tight">NexMart ID</h3>
+                <h3 className="font-bold text-base text-white tracking-tight">Your NexMart account</h3>
                 {isFirebaseConfigured ? (
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1">
                     <Flame className="w-3 h-3 text-amber-400" />
@@ -155,7 +155,7 @@ export const AuthModal: React.FC = () => {
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                {isFirebaseConfigured ? 'Secured with Google Firebase Authentication SDK' : 'Enterprise Unified Identity Provider'}
+                {isFirebaseConfigured ? 'Secure sign-in for your marketplace account' : 'Enterprise Unified Identity Provider'}
               </p>
             </div>
           </div>
@@ -180,6 +180,8 @@ export const AuthModal: React.FC = () => {
           </div>
         )}
 
+        {!isFirebaseConfigured && (
+        <>
         {/* 1-Click Quick Demo Switcher Presets */}
         <div className="bg-slate-50 border-b border-slate-200 px-6 py-3.5">
           <div className="flex items-center justify-between mb-2">
@@ -228,6 +230,8 @@ export const AuthModal: React.FC = () => {
             </button>
           </div>
         </div>
+        </>
+        )}
 
         {/* Tab Switcher: Sign In vs Create Account */}
         <div className="flex border-b border-slate-200 px-6 pt-3">
@@ -244,7 +248,7 @@ export const AuthModal: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Firebase Email Sign In
+            Sign in
           </button>
           <button
             type="button"
@@ -259,7 +263,7 @@ export const AuthModal: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Create New Account
+            Create account
           </button>
         </div>
 
@@ -279,7 +283,8 @@ export const AuthModal: React.FC = () => {
             </div>
           )}
 
-          {/* Role selector for registration or custom sign in */}
+          {/* Role selector is needed for onboarding/protected portal entry, not ordinary sign-in. */}
+          {(authModalMode === 'register' || targetProtectedRole) && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 block">
@@ -335,6 +340,7 @@ export const AuthModal: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
 
           {/* RBAC Security Notice (Requirement 7: Prevents self-granting privileged roles) */}
           {authModalMode === 'register' && selectedRole === 'vendor' && (
@@ -457,6 +463,14 @@ export const AuthModal: React.FC = () => {
               </>
             )}
           </button>
+
+          <div className="text-center text-xs text-slate-600">
+            {authModalMode === 'login' ? (
+              <>New to NexMart? <button type="button" onClick={() => { setAuthModalMode('register'); setLocalError(null); clearAuthError(); }} className="font-bold text-slate-900 hover:text-amber-700 underline underline-offset-2">Create your NexMart account</button></>
+            ) : (
+              <>Already have an account? <button type="button" onClick={() => { setAuthModalMode('login'); setLocalError(null); clearAuthError(); }} className="font-bold text-slate-900 hover:text-amber-700 underline underline-offset-2">Sign in</button></>
+            )}
+          </div>
 
           {/* Security & Token Protocol Footer */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">

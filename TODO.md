@@ -44,12 +44,20 @@
 - Clearly label demo persona switching as demo-only; it must never grant real Firebase privileges.
 - If an admin provisioning backend is missing, document that limitation rather than inventing a client-side mechanism.
 
-## 6. Keep storage and payments honest
+## 6. Add Amazon-style Firebase account access
+
+- Show separate `Sign in` and `Create account` actions for guests in the global account area.
+- Use Firebase Email/Password Authentication for real sign-in, sign-up, logout, and friendly error states.
+- Keep ordinary sign-in focused on email and password; preserve vendor onboarding and trusted-role messaging during account creation.
+- Start published Firebase builds as an unauthenticated guest rather than presenting a demo customer session.
+- Keep the supplied browser-safe Firebase Web App configuration in the environment template/default client config without adding private service credentials.
+
+## 7. Keep storage and payments honest
 
 - Verify whether the current UI uses Firebase Storage; if not, document that no Storage rules are needed.
 - Keep checkout identified as demo/test because no secure server-side payment provider and verification are present.
 
-## 7. Validate and package
+## 8. Validate and package
 
 - Run dependency installation, TypeScript typecheck, production build, static rules checks, and the Firebase Emulator suite when its prerequisites are available.
 - If emulator tests cannot run, record the exact reason and the command.

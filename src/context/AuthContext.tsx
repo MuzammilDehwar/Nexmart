@@ -115,8 +115,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<UserRole>('customer');
-  const [user, setUser] = useState<User | null>(PRESET_USERS.customer);
+  const [role, setRole] = useState<UserRole>(isFirebaseConfigured ? 'guest' : 'customer');
+  const [user, setUser] = useState<User | null>(isFirebaseConfigured ? null : PRESET_USERS.customer);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);

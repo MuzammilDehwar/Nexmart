@@ -192,16 +192,27 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <span>Verifying...</span>
               </div>
             ) : role === 'guest' ? (
-              <button
-                onClick={() => {
-                  setAuthModalMode('login');
-                  setIsAuthModalOpen(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
-              >
-                <LogIn className="w-3.5 h-3.5 text-slate-600" />
-                <span>Sign In</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setAuthModalMode('login');
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Sign in</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthModalMode('register');
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-bold text-white bg-slate-900 border border-slate-900 rounded-lg hover:bg-slate-800 transition-colors shadow-xs"
+                >
+                  Create account
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}

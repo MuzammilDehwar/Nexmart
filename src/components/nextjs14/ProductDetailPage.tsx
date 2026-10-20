@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useCart } from '../../context/CartContext';
-import { SAMPLE_NEXTJS_PRODUCTS } from './CustomerHomepage';
+import { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
 import { 
   Star, 
   Truck, 

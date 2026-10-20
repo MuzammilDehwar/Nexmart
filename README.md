@@ -23,7 +23,7 @@ The emulator suite is available with `npm run test:emulator`; it downloads the F
 
 ## Firebase configuration
 
-Use the existing Firebase project `nexmart-a6309` and enable Email/Password Authentication. The browser-safe values belong in `.env.local` or the hosting environment using the names in `.env.example`. The Firebase API key is the only value intentionally left as a placeholder because it was not present in the supplied archive. Never add a service-account JSON or private key to the frontend.
+Use the existing Firebase project `nexmart-a6309`, enable Email/Password Authentication, and add `localhost` plus the published domain to Firebase Authentication → Settings → Authorized domains. The browser-safe values belong in `.env.local` or the hosting environment using the names in `.env.example`. The supplied Firebase Web App configuration is included as a browser-safe default and can still be overridden with `.env.local`. Never add a service-account JSON or private key to the frontend.
 
 Real admin and vendor privileges are resolved from trusted Firebase Custom Claims or admin-managed Firestore records. `VITE_ADMIN_EMAILS` is not used as an authorization mechanism. A secure admin provisioning backend or Firebase Admin SDK deployment is still required to assign those claims; the client cannot safely create them.
 
