@@ -144,6 +144,46 @@ service cloud.firestore {
         ]));
     }
 
+    match /chat_threads/{threadId} {
+      allow read: if isSignedIn() && (!exists(/databases/$(database)/documents/chat_threads/$(threadId)) || resource.data.participants.hasAny([request.auth.uid]));
+      allow create: if isSignedIn()
+                    && request.resource.data.customerUid == request.auth.uid
+                    && request.resource.data.vendorUid is string
+                    && request.resource.data.participants.hasAll([request.auth.uid, request.resource.data.vendorUid])
+                    && request.resource.data.productId is string
+                    && request.resource.data.productTitle is string
+                    && request.resource.data.vendorName is string;
+      allow update: if isSignedIn()
+                    && resource.data.participants.hasAny([request.auth.uid])
+                    && request.resource.data.participants == resource.data.participants
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'lastMessage', 'updatedAt', 'productTitle', 'vendorName'
+                    ]);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+                    && (!exists(/databases/$(database)/documents/chat_threads/$(threadId)) || get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participants.hasAny([request.auth.uid]));
+        allow create: if isSignedIn()
+                      && request.resource.data.senderUid == request.auth.uid
+                      && request.resource.data.senderRole in ['customer', 'vendor', 'admin']
+                      && request.resource.data.body is string
+                      && request.resource.data.body.size() > 0
+                      && request.resource.data.body.size() <= 2000
+                      && get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participants.hasAny([request.auth.uid]);
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() && resource.data.userUid == request.auth.uid;
+      allow create: if isAdmin();
+      allow update: if isSignedIn()
+                    && resource.data.userUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userUid == request.auth.uid);
+    }
+
     match /admins/{adminUid} {
       allow read, write: if isAdmin();
     }

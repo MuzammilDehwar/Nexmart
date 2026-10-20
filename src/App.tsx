@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppTab, CartProvider, useCart } from './context/CartContext';
 import { EngagementProvider } from './context/EngagementContext';
+import { RealtimeCommerceProvider } from './context/RealtimeCommerceContext';
 import { Navigation } from './components/Navigation';
 import { AuthModal } from './components/AuthModal';
 import { AccessGuard } from './components/AccessGuard';
@@ -28,9 +29,11 @@ export default function App() {
   return (
     <AuthProvider>
       <EngagementProvider>
-        <CartProvider>
-          <MainApp />
-        </CartProvider>
+        <RealtimeCommerceProvider>
+          <CartProvider>
+            <MainApp />
+          </CartProvider>
+        </RealtimeCommerceProvider>
       </EngagementProvider>
     </AuthProvider>
   );

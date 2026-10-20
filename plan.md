@@ -80,3 +80,19 @@ The next phase is intentionally demo-safe: no live money movement, gateway API c
 ### Validation workflow
 
 Run TypeScript diagnostics, production build, static Firestore rule checks, and emulator tests when available. Use one read-only implementation review before checkpointing. Re-publish only after the approved checkpoint is validated.
+
+
+## Approved Phase 2 extension — real-time commerce foundation
+
+The next implementation slice upgrades the reversible Phase 1 seams to real-time Firebase behavior wherever secure browser access is appropriate. Authenticated chat threads and messages will use Firestore listeners, customer/admin order listeners will remain live and ownership-scoped, and notification events will be stored as per-user records. Demo/local fallback remains available for guests and when the deployment gate is disabled. No payment provider will be represented as live until a server-side adapter, webhook verification, and provider credentials are configured; checkout will continue to label local payment methods as simulation until then.
+
+### Real-time data model
+
+- `chat_threads/{threadId}` stores only participants, product/vendor context, last-message metadata and timestamps.
+- `chat_threads/{threadId}/messages/{messageId}` stores message body, sender UID/role, and event timestamps; only thread participants may read or create messages.
+- `notifications/{notificationId}` stores user-scoped order/chat/system events; only the target user may read, and only trusted server/admin paths may create or mutate them.
+- Existing `orders` and `orders/{orderId}/packages/{packageId}` listeners remain the source of truth for live customer tracking and vendor fulfillment status; client payment fields remain server-controlled.
+
+### Integration boundary
+
+The browser may subscribe to and write only user-owned chat messages allowed by rules. A future server adapter will handle payment initiation, JazzCash/EasyPaisa callbacks, bank-transfer verification, COD status, SMS/WhatsApp delivery, reward settlement, referral attribution and AI provider calls. These adapters require secrets and webhook verification; they will not be simulated as completed real-world actions.

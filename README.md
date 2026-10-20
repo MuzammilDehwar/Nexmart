@@ -6,7 +6,9 @@ Firestore listeners are intentionally disabled by default with `VITE_FIREBASE_EN
 
 ## Phase 1 demo-safe commerce tools
 
-The storefront includes demo-only JazzCash, Easypaisa, bank-transfer reference, and COD checkout flows; rewards and referrals; visual-search upload simulation; a local shopping assistant; seller chat; and simulated SMS/WhatsApp order events. These flows do not move money, call a payment provider, upload images externally, or expose an AI secret. Real gateway webhooks, server-side wallet settlement, authenticated chat storage, and provider-backed AI should be added behind server-side functions and secrets before production use.
+The storefront includes demo-only JazzCash, Easypaisa, bank-transfer reference, and COD checkout flows; rewards and referrals; visual-search upload simulation; a local shopping assistant; and simulated SMS/WhatsApp order events. These flows do not move money, call a payment provider, upload images externally, or expose an AI secret.
+
+The seller chat widget now has a real-time Firebase path for authenticated users when `VITE_FIREBASE_ENABLE_FIRESTORE_SYNC="true"` and the reviewed rules are deployed. Threads and messages are participant-scoped under `chat_threads/{threadId}`; guests retain the local demo fallback. Customer/admin order listeners remain live and ownership-scoped through the existing order collections. Real gateway webhooks, server-side order creation, wallet/reward settlement, SMS/WhatsApp delivery, referral attribution, and provider-backed AI still require a trusted server adapter and secrets; the browser must not claim those actions are live.
 
 ## Run locally
 
@@ -25,7 +27,7 @@ npm run build
 npm run test:rules
 ```
 
-The emulator suite is available with `npm run test:emulator`; it downloads the Firebase CLI/emulator on demand and requires Java. The suite currently covers 16 Firestore permission cases. The rules are not published automatically.
+The emulator suite is available with `npm run test:emulator`; it downloads the Firebase CLI/emulator on demand and requires Java. The suite currently covers 16 Firestore permission cases, while the static rules audit covers the real-time chat and notification contracts as well. The rules are not published automatically.
 
 ## Firebase configuration
 
@@ -35,7 +37,7 @@ Real admin and vendor privileges are resolved from trusted Firebase Custom Claim
 
 ## Firestore rules
 
-The final `firestore.rules` uses default-deny behavior. Public catalogue listeners query `approvalStatus == approved`; authenticated customers query `customerId == auth.uid`; verified vendors query `vendorUid == auth.uid` and `vendorUids array-contains auth.uid`; admins use trusted claims/records. Firestore rules must be published manually from the Firebase Console or CLI after review.
+The final `firestore.rules` uses default-deny behavior. Public catalogue listeners query `approvalStatus == approved`; authenticated customers query `customerId == auth.uid`; verified vendors query `vendorUid == auth.uid` and `vendorUids array-contains auth.uid`; admins use trusted claims/records. Real-time chat reads/writes are scoped to the participant list and authenticated sender UID; notifications are user-owned and trusted-created. Firestore rules must be published manually from the Firebase Console or CLI after review.
 
 The current UI does not use Firebase Storage uploads, so no `storage.rules` file is included. Checkout remains explicitly demo/test: no server-side payment provider or payment verification is implemented.
 

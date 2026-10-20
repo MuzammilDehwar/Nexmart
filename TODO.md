@@ -95,3 +95,12 @@
 
 - Maintain modular TypeScript components, responsive mobile-first layout, clean diagnostics, zero TypeScript/build errors, static rules checks, and emulator checks when prerequisites are available.
 - Update setup documentation with the demo-safe limitation, future production integration seams, and exact build/test commands.
+
+
+## 14. Build a secure real-time commerce foundation
+
+- Authenticated buyers and approved vendors must be able to use Firestore-backed chat threads with live message listeners, participant-scoped access, product/vendor context, and a local demo fallback for guests or disabled sync.
+- Customer and admin order listeners must remain live and ownership-scoped; vendor fulfillment status must use supported vendor projections or package documents without exposing customer financial data.
+- Per-user notification records must be ownership-scoped; the browser must not self-create payment-success, reward-settlement, referral-cash, SMS, WhatsApp, or privileged notification events.
+- Add strict Firestore rules and static tests for chat threads, messages, notifications, and existing order/package listeners.
+- Keep JazzCash, Easypaisa, bank-transfer verification, COD settlement, SMS/WhatsApp delivery, rewards settlement, referrals, and AI provider calls explicitly behind future server-side adapters with secrets and webhook verification; do not claim these are live until those adapters are configured.

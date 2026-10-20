@@ -161,6 +161,33 @@ function runVerification() {
     'Vendors may only access their own sanitized order projections'
   );
 
+  assertRule(
+    'Chat Threads Are Participant-Scoped',
+    'Realtime Commerce',
+    rulesContent.includes('match /chat_threads/{threadId}') &&
+      rulesContent.includes('resource.data.participants.hasAny([request.auth.uid])') &&
+      rulesContent.includes('request.resource.data.customerUid == request.auth.uid'),
+    'Only authenticated thread participants may read or create their own buyer thread'
+  );
+
+  assertRule(
+    'Chat Messages Bind Sender Identity',
+    'Realtime Commerce',
+    rulesContent.includes('match /messages/{messageId}') &&
+      rulesContent.includes('request.resource.data.senderUid == request.auth.uid') &&
+      rulesContent.includes('request.resource.data.body.size() <= 2000'),
+    'Messages must bind to the authenticated sender and have a bounded body'
+  );
+
+  assertRule(
+    'Notifications Are User-Owned',
+    'Realtime Commerce',
+    rulesContent.includes('match /notifications/{notificationId}') &&
+      rulesContent.includes('resource.data.userUid == request.auth.uid') &&
+      rulesContent.includes('allow create: if isAdmin()'),
+    'Users may read/update only their own notifications; creation is trusted'
+  );
+
   // 7. Verified Privilege Logic (Requirement 6)
   assertRule(
     'Admin Checks Require Trusted Claims or Admin Records',
