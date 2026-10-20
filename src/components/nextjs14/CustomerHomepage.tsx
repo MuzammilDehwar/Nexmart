@@ -23,7 +23,7 @@ import { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
 import { RewardsReferralPanel, VisualSearchPanel } from '../phase1/Phase1CommerceTools';
 export { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
 export const CustomerHomepage: React.FC = () => {
-  const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders, onNavigateToTab, productSyncState, orderSyncState } = useCart();
+  const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders, productSyncState, orderSyncState } = useCart();
   
   // Search & Category state
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -34,7 +34,6 @@ export const CustomerHomepage: React.FC = () => {
   const [minRating, setMinRating] = useState<number>(0);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
-  const [showPending, setShowPending] = useState(false);
 
   // Sorting Option
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating-desc' | 'reviews-desc' | 'name-asc'>('featured');
@@ -137,7 +136,7 @@ export const CustomerHomepage: React.FC = () => {
       }
 
       // Catalog Governance: Only admin-approved products appear live on the Customer Storefront
-      if (prod.approvalStatus && prod.approvalStatus !== 'approved' && !showPending) {
+      if (prod.approvalStatus && prod.approvalStatus !== 'approved') {
         return false;
       }
 
@@ -156,7 +155,7 @@ export const CustomerHomepage: React.FC = () => {
       if (sortBy === 'name-asc') return a.title.localeCompare(b.title);
       return 0; // 'featured'
     });
-  }, [products, selectedCategory, searchQuery, maxPrice, minRating, selectedBrands, inStockOnly, sortBy, showPending]);
+  }, [products, selectedCategory, searchQuery, maxPrice, minRating, selectedBrands, inStockOnly, sortBy]);
 
   const handleOpenProduct = (product: ProductData) => {
     setSelectedProductId(product.id);
@@ -257,7 +256,7 @@ export const CustomerHomepage: React.FC = () => {
         </header>
 
         {/* Hero Banner Section */}
-        <section className="relative bg-slate-900 text-white overflow-hidden py-10 md:py-12 px-4 md:px-6">
+        <section className="relative bg-slate-950 text-white overflow-hidden py-12 md:py-16 px-4 md:px-6">
           <img
             src="/src/assets/images/hero_marketplace_showcase_1792380848955.jpg"
             alt="Flagship Showcase"
@@ -267,16 +266,25 @@ export const CustomerHomepage: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
 
           <div className="relative z-10 max-w-7xl mx-auto space-y-2.5">
-            <div className="flex items-center gap-2 text-xs text-amber-400 font-semibold tracking-wide uppercase">
+            <div className="flex items-center gap-2 text-[11px] text-amber-400 font-bold tracking-[0.18em] uppercase">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Multi-Vendor Discovery Hub</span>
+              <span>Curated by NexMart</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-white max-w-2xl">
-              Precision Hardware & Artisan Electronics
+            <h1 className="text-3xl md:text-5xl font-bold font-display tracking-[-0.04em] text-white max-w-2xl leading-[1.05]">
+              The best gear, from the people who make it.
             </h1>
-            <p className="text-xs md:text-sm text-slate-300 max-w-xl leading-relaxed">
-              Use live faceted sidebar filters and predictive search autocompletion to find verified merchant products with instant stock assurance.
+            <p className="text-sm md:text-base text-slate-300 max-w-xl leading-relaxed">
+              Discover design-led electronics, precision accessories, and everyday upgrades from verified independent sellers.
             </p>
+            <div className="flex flex-wrap items-center gap-3 pt-3">
+              <button onClick={() => setSelectedCategory('all')} className="rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg shadow-amber-400/20 transition hover:bg-amber-300">Shop the collection</button>
+              <button onClick={() => setSelectedCategory('audio')} className="rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-xs font-bold text-white backdrop-blur transition hover:bg-white/15">Explore audio</button>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-6 text-[11px] font-semibold text-slate-300">
+              <span><strong className="text-white">Verified</strong> sellers</span>
+              <span><strong className="text-white">Curated</strong> catalogue</span>
+              <span><strong className="text-white">Tracked</strong> delivery</span>
+            </div>
           </div>
         </section>
 
@@ -291,33 +299,6 @@ export const CustomerHomepage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 md:px-6 pt-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
               <strong className="text-slate-900">Catalog status:</strong> {syncNotice}
-            </div>
-          </div>
-        )}
-
-        {/* Catalog Moderation Status Notice */}
-        {products.some((p) => p.approvalStatus === 'pending') && (
-          <div className="bg-amber-50 border-y border-amber-200 px-4 md:px-6 py-2.5 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span>
-                <strong>Catalog Moderation Active:</strong>{' '}
-                {products.filter((p) => p.approvalStatus === 'pending').length} vendor product(s) in review.
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setShowPending(!showPending)}
-                className="px-2.5 py-1 bg-white border border-amber-300 hover:bg-amber-100 rounded text-[11px] font-bold text-amber-900 transition-colors shadow-2xs"
-              >
-                {showPending ? 'Hide Unapproved Items' : 'Preview Unapproved Items'}
-              </button>
-              <button
-                onClick={() => onNavigateToTab && onNavigateToTab('admin')}
-                className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[11px] font-bold transition-colors shadow-2xs"
-              >
-                Open Admin Tower &rarr;
-              </button>
             </div>
           </div>
         )}
