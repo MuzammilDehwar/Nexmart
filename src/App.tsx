@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
+import { EngagementProvider } from './context/EngagementContext';
 import { Navigation } from './components/Navigation';
 import { AuthModal } from './components/AuthModal';
 import { AccessGuard } from './components/AccessGuard';
@@ -21,13 +22,16 @@ import { VendorPortal } from './components/VendorPortal';
 import { AdminPortal } from './components/AdminPortal';
 import { SchemaErdViewer } from './components/SchemaErdViewer';
 import { GENERATE_ENTERPRISE_BLUEPRINT_MARKDOWN } from './utils/exportMarkdown';
+import { SmartShoppingAssistant, VendorChatWidget } from './components/phase1/Phase1CommerceTools';
 
 export default function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <MainApp />
-      </CartProvider>
+      <EngagementProvider>
+        <CartProvider>
+          <MainApp />
+        </CartProvider>
+      </EngagementProvider>
     </AuthProvider>
   );
 }
@@ -134,6 +138,10 @@ function MainApp() {
 
           {activeTab === 'schema' && <SchemaErdViewer />}
         </main>
+        {activeTab === 'customer' && <>
+          <SmartShoppingAssistant />
+          <VendorChatWidget />
+        </>}
       </div>
 
       {/* Quiet, Clean Editorial Footer */}

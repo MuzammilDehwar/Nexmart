@@ -53,7 +53,8 @@ export interface Order {
     country: string;
     phone: string;
   };
-  paymentMethod: 'stripe' | 'cod' | 'bnpl';
+  paymentMethod: 'stripe' | 'jazzcash' | 'easypaisa' | 'bank_transfer' | 'cod' | 'bnpl';
+  paymentReference?: string;
   paymentStatus?: 'pending' | 'paid' | 'refunded';
   items: CartItem[];
   subtotal: number;
@@ -104,7 +105,8 @@ interface CartContextType {
   orderSyncState: 'demo' | 'signed-out' | 'loading' | 'live' | 'empty' | 'permission-denied' | 'offline';
   placeOrder: (
     shippingAddress: Order['shippingAddress'],
-    paymentMethod: 'stripe' | 'cod' | 'bnpl'
+    paymentMethod: Order['paymentMethod'],
+    paymentReference?: string
   ) => Order;
   updateOrderStatus: (orderId: string, vendorName: string, newStatus: OrderStatus) => void;
 }
@@ -301,6 +303,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    if (firebaseUser && authUser?.authSource === 'firebase') {
+      // Never show browser-local/demo orders inside a real Firebase session.
+      setOrders([]);
+    }
+
     // Firebase Auth can be used independently from Firestore. Keep listeners disabled
     // until the reviewed firestore.rules file has been deployed to the same project;
     // this prevents permission-denied loops and preserves the local catalogue.
@@ -321,7 +328,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const syncError = (error: { code?: string; message?: string }, kind: 'products' | 'orders') => {
       const state = error.code === 'permission-denied' ? 'permission-denied' : 'offline';
       if (kind === 'products') setProductSyncState(state);
-      else setOrderSyncState(state);
+      else {
+        setOrders([]);
+        setOrderSyncState(state);
+      }
       console.info(`[NexMart Firebase] ${kind} synchronization ${state}. Check firestore.rules deployment and VITE_FIREBASE_ENABLE_FIRESTORE_SYNC.`, error.message || error.code || error);
     };
 
@@ -390,7 +400,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isDemoSession = !firebaseUser || authUser?.authSource === 'demo';
     if (isDemoSession) {
       setProducts((prev) => [productWithStatus, ...prev]);
-    } else if (db && authRole === 'vendor') {
+    } else if (isFirestoreSyncEnabled && db && authRole === 'vendor') {
       setDoc(doc(db, 'products', productWithStatus.id), {
         ...productWithStatus,
         vendorUid: firebaseUser.uid,
@@ -402,7 +412,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const approveProduct = (productId: string) => {
     if (!firebaseUser || authUser?.authSource === 'demo') {
       setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'approved', rejectionReason: undefined } : p)));
-    } else if (db && authRole === 'admin') {
+    } else if (isFirestoreSyncEnabled && db && authRole === 'admin') {
       updateDoc(doc(db, 'products', productId), { approvalStatus: 'approved', rejectionReason: null }).catch((err) => {
         console.warn('[NexMart Firebase] product approval failed:', err);
       });
@@ -412,7 +422,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const rejectProduct = (productId: string, reason: string = 'Violates platform catalog guidelines') => {
     if (!firebaseUser || authUser?.authSource === 'demo') {
       setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, approvalStatus: 'rejected', rejectionReason: reason } : p)));
-    } else if (db && authRole === 'admin') {
+    } else if (isFirestoreSyncEnabled && db && authRole === 'admin') {
       updateDoc(doc(db, 'products', productId), { approvalStatus: 'rejected', rejectionReason: reason }).catch((err) => {
         console.warn('[NexMart Firebase] product rejection failed:', err);
       });
@@ -484,7 +494,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Place order from checkout
   const placeOrder = (
     shippingAddress: Order['shippingAddress'],
-    paymentMethod: 'stripe' | 'cod' | 'bnpl'
+    paymentMethod: Order['paymentMethod'],
+    paymentReference?: string
   ): Order => {
     const newOrderId = `NXM-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const now = new Date();
@@ -529,6 +540,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       customerEmail: firebaseUser?.email || authUser?.email || 'julian.vance@example.com',
       shippingAddress,
       paymentMethod,
+      paymentReference,
       paymentStatus: 'pending',
       items: [...cart],
       subtotal: cartSubtotal,
@@ -543,11 +555,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastCompletedOrderNumber(newOrderId);
     clearCart();
 
-    if (firebaseUser && db && authUser?.authSource === 'firebase') {
-      setDoc(doc(db, 'orders', newOrder.id), newOrder).catch((err) => {
-        console.warn('[NexMart Firebase] order create failed:', err);
-      });
-    }
+    // Phase 1 keeps order creation browser-local. A future trusted server
+    // function must calculate totals, reserve inventory, and verify payment
+    // before writing an order; browser-supplied financial fields are untrusted.
 
     return newOrder;
   };

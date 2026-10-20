@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
+import { RewardsReferralPanel, VisualSearchPanel } from '../phase1/Phase1CommerceTools';
 export { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
 import { useAuth } from '../../context/AuthContext';
 
@@ -158,7 +159,7 @@ export const CustomerHomepage: React.FC = () => {
       if (sortBy === 'name-asc') return a.title.localeCompare(b.title);
       return 0; // 'featured'
     });
-  }, [products, selectedCategory, searchQuery, maxPrice, minRating, selectedBrands, inStockOnly, sortBy]);
+  }, [products, selectedCategory, searchQuery, maxPrice, minRating, selectedBrands, inStockOnly, sortBy, showPending]);
 
   const handleOpenProduct = (product: ProductData) => {
     setSelectedProductId(product.id);
@@ -281,6 +282,21 @@ export const CustomerHomepage: React.FC = () => {
             </p>
           </div>
         </section>
+
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-5">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-3">
+            <RewardsReferralPanel />
+            <VisualSearchPanel />
+          </div>
+        </section>
+
+        {syncNotice && (
+          <div className="max-w-7xl mx-auto px-4 md:px-6 pt-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+              <strong className="text-slate-900">Catalog status:</strong> {syncNotice}
+            </div>
+          </div>
+        )}
 
         {/* Catalog Moderation Status Notice */}
         {products.some((p) => p.approvalStatus === 'pending') && (

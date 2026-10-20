@@ -4,6 +4,10 @@ NexMart is a React + TypeScript + Vite multi-vendor marketplace prototype with a
 
 Firestore listeners are intentionally disabled by default with `VITE_FIREBASE_ENABLE_FIRESTORE_SYNC="false"` until the reviewed `firestore.rules` file is deployed to `nexmart-a6309`; Firebase Email/Password Auth remains active. After deployment, set the flag to `true`, rebuild, and redeploy.
 
+## Phase 1 demo-safe commerce tools
+
+The storefront includes demo-only JazzCash, Easypaisa, bank-transfer reference, and COD checkout flows; rewards and referrals; visual-search upload simulation; a local shopping assistant; seller chat; and simulated SMS/WhatsApp order events. These flows do not move money, call a payment provider, upload images externally, or expose an AI secret. Real gateway webhooks, server-side wallet settlement, authenticated chat storage, and provider-backed AI should be added behind server-side functions and secrets before production use.
+
 ## Run locally
 
 ```bash

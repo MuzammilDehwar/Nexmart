@@ -63,3 +63,35 @@
 - If emulator tests cannot run, record the exact reason and the command.
 - Deliver the final `firestore.rules`, `.env.example`, setup guide, changed-file report, remaining manual setup list, and a complete runnable project archive.
 - Do not publish Firebase rules automatically.
+
+## 8. Add demo-safe local commerce payments and checkout verification
+
+- Checkout must support JazzCash, EasyPaisa, Bank Transfer with a transaction ID, and Cash on Delivery in an explicitly labelled demo/sandbox mode.
+- Each method must validate its required fields, show a clear simulated processing state, create an order with the selected payment method and pending payment status, and never claim that real funds moved or that a gateway webhook verified payment.
+- Order confirmation must show simulated SMS/WhatsApp notification events and a trackable order status timeline.
+
+## 9. Add the storefront smart-shopping layer
+
+- Add a storefront AI shopping assistant that recommends products from current catalogue data, search intent, browsing context, and user preferences.
+- Keep Phase 1 assistant responses rule-based/local with a server-ready adapter boundary; do not expose a Gemini or other provider secret in browser code.
+- Add visual-search simulation with image upload preview, local matching against the demo catalogue, clear simulated status, and no external image upload in Phase 1.
+
+## 10. Add buyer/vendor chat simulation
+
+- Add a responsive chat widget for product inquiries, negotiations, and support threads scoped by buyer, vendor, and product.
+- Persist demo threads locally only, label the mode clearly, and keep the data model ready for a future authenticated Firestore subcollection.
+
+## 11. Add loyalty and viral referral simulation
+
+- Add daily login bonus, reward points on demo purchases, scratch-card discount claims, referral code/progress, and wallet-cash simulation after referred signup and purchase milestones.
+- Keep rewards and referrals demo-only and separate from trusted Firebase authorization or real wallet settlement.
+
+## 12. Preserve and harden role portals
+
+- Keep the customer storefront, wishlist, cart drawer, checkout, order history, vendor dashboard, inventory/sales/reviews/payout request views, and admin governance/commission views.
+- Do not grant vendor/admin privileges from client-editable role state; retain trusted claims/server authorization for real Firebase sessions and clearly mark demo persona switching.
+
+## 13. Performance, quality, and delivery
+
+- Maintain modular TypeScript components, responsive mobile-first layout, clean diagnostics, zero TypeScript/build errors, static rules checks, and emulator checks when prerequisites are available.
+- Update setup documentation with the demo-safe limitation, future production integration seams, and exact build/test commands.

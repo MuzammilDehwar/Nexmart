@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../../context/CartContext';
+import { useEngagement } from '../../context/EngagementContext';
 import { 
   Check, 
   CreditCard, 
@@ -33,6 +34,7 @@ export const CheckoutPage: React.FC = () => {
     placeOrder,
     marketplaceCommissionRate,
   } = useCart();
+  const { awardPurchasePoints } = useEngagement();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,9 +57,10 @@ export const CheckoutPage: React.FC = () => {
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('express');
 
   // Step 3: Payment Gateway Method
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cod' | 'bnpl'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'jazzcash' | 'easypaisa' | 'bank_transfer' | 'cod' | 'bnpl'>('jazzcash');
+  const [paymentReference, setPaymentReference] = useState('');
 
-  // Stripe Elements Mock State
+  // Demo test-card mock state; never send raw card data to a server.
   const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvc, setCardCvc] = useState('882');
@@ -123,32 +126,37 @@ export const CheckoutPage: React.FC = () => {
     if (paymentMethod === 'cod' && !isOtpVerified) {
       return;
     }
+    if (['jazzcash', 'easypaisa', 'bank_transfer'].includes(paymentMethod) && paymentReference.trim().length < 4) {
+      return;
+    }
 
     setIsSubmitting(true);
 
     if (paymentMethod === 'stripe') {
-      setStripeProcessingStep('Tokenizing Card via Stripe Elements...');
+      setStripeProcessingStep('Preparing demo test-card flow...');
       setTimeout(() => {
-        setStripeProcessingStep('Stripe 3D Secure 2.0 Challenge (Zero-Friction Authentication)...');
+        setStripeProcessingStep('Simulating provider verification (no real charge)...');
         setTimeout(() => {
-          setStripeProcessingStep('Splitting 5% Platform Rake into NexMart Escrow Ledger...');
+          setStripeProcessingStep('Simulating marketplace ledger allocation...');
           setTimeout(() => {
-            const order = placeOrder(address, paymentMethod);
+            const order = placeOrder(address, paymentMethod, paymentReference.trim() || undefined);
             setIsSubmitting(false);
             setStripeProcessingStep(null);
             setIsCompleted(true);
             setOrderNumber(order.id);
             setCreatedOrder(order);
+            awardPurchasePoints(order.total);
           }, 600);
         }, 600);
       }, 600);
     } else {
       setTimeout(() => {
-        const order = placeOrder(address, paymentMethod);
+        const order = placeOrder(address, paymentMethod, paymentReference.trim() || undefined);
         setIsSubmitting(false);
         setIsCompleted(true);
         setOrderNumber(order.id);
         setCreatedOrder(order);
+        awardPurchasePoints(order.total);
       }, 800);
     }
   };
@@ -165,7 +173,7 @@ export const CheckoutPage: React.FC = () => {
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold uppercase tracking-wider">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Payment Verified &amp; Escrow Dispatched</span>
+              <span>Demo Payment Flow Completed</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold font-display text-slate-900">
               Order Confirmed!
@@ -173,9 +181,13 @@ export const CheckoutPage: React.FC = () => {
             <p className="text-sm font-mono font-bold text-amber-700">
               Order ID: {createdOrder.id}
             </p>
-            <p className="text-xs text-slate-600 max-w-md mx-auto">
-              Thank you for your purchase. We have sent a confirmation receipt to <strong>{createdOrder.customerEmail}</strong>.
+          <p className="text-xs text-slate-600 max-w-md mx-auto">
+              Thank you for testing NexMart. A simulated confirmation event was created for <strong>{createdOrder.customerEmail}</strong>; no real payment was processed.
             </p>
+            <div className="grid grid-cols-2 gap-2 max-w-md mx-auto text-left">
+              <div className="rounded-lg border border-sky-200 bg-sky-50 p-2.5 text-[10px] text-sky-900"><strong className="block">SMS simulation</strong>Confirmation queued for {createdOrder.shippingAddress.phone}</div>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] text-emerald-900"><strong className="block">WhatsApp simulation</strong>Order timeline event created</div>
+            </div>
           </div>
 
           {/* Amazon-Style Order Summary Box */}
@@ -543,7 +555,34 @@ export const CheckoutPage: React.FC = () => {
               {step === 3 ? (
                 <div className="space-y-5">
                   {/* Payment Methods */}
-                  <div className="grid grid-cols-3 gap-2.5 text-xs font-medium">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('jazzcash')}
+                      className={`p-3 rounded-xl border text-left transition-all ${paymentMethod === 'jazzcash' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <Smartphone className="w-4 h-4 mb-1 text-rose-400" />
+                      <div className="font-bold">JazzCash</div>
+                      <span className="text-[10px] opacity-75">Demo wallet</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('easypaisa')}
+                      className={`p-3 rounded-xl border text-left transition-all ${paymentMethod === 'easypaisa' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <Smartphone className="w-4 h-4 mb-1 text-emerald-500" />
+                      <div className="font-bold">Easypaisa</div>
+                      <span className="text-[10px] opacity-75">Demo wallet</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('bank_transfer')}
+                      className={`p-3 rounded-xl border text-left transition-all ${paymentMethod === 'bank_transfer' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <CreditCard className="w-4 h-4 mb-1 text-sky-500" />
+                      <div className="font-bold">Bank Transfer</div>
+                      <span className="text-[10px] opacity-75">Transaction ID</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('stripe')}
@@ -583,17 +622,32 @@ export const CheckoutPage: React.FC = () => {
                     >
                       <Truck className="w-4 h-4 mb-1 text-amber-500" />
                       <div className="font-bold">Cash on Delivery</div>
-                      <span className="text-[10px] opacity-75">Phone Verified</span>
+                      <span className="text-[10px] opacity-75">Demo OTP</span>
                     </button>
                   </div>
 
-                  {/* Stripe Elements / PaymentSheet Mock */}
+                  {(paymentMethod === 'jazzcash' || paymentMethod === 'easypaisa' || paymentMethod === 'bank_transfer') && (
+                    <div className="p-4 bg-sky-50 rounded-xl border border-sky-200 text-xs text-sky-950 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-bold">{paymentMethod === 'bank_transfer' ? 'Bank transfer verification' : `${paymentMethod === 'jazzcash' ? 'JazzCash' : 'Easypaisa'} checkout`}</p>
+                          <p className="text-[11px] text-sky-800 mt-1">Demo-safe flow: no real payment is sent. Enter a test reference to continue.</p>
+                        </div>
+                        <span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-sky-700">SIMULATION</span>
+                      </div>
+                      {paymentMethod === 'bank_transfer' && <div className="rounded-lg bg-white border border-sky-200 p-3 text-[11px] text-slate-600">Demo account: <strong className="font-mono text-slate-900">NEXMART-001</strong> · Beneficiary: NexMart Marketplace</div>}
+                      <input value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder={paymentMethod === 'bank_transfer' ? 'Enter demo transaction ID' : 'Enter demo wallet reference'} className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 font-mono text-xs outline-none focus:border-sky-500" />
+                      <p className="text-[10px] text-sky-700">Minimum 4 characters. The order remains pending until a real server-side provider verifies it.</p>
+                    </div>
+                  )}
+
+                  {/* Test-card UI mock; replace with hosted provider Elements before production. */}
                   {paymentMethod === 'stripe' && (
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4 text-xs">
                       <div className="flex items-center justify-between font-semibold text-slate-800">
                         <span className="flex items-center gap-1.5">
                           <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Stripe Elements Card PaymentSheet</span>
+                          <span>Demo test-card form</span>
                         </span>
                         <button
                           type="button"
@@ -682,7 +736,7 @@ export const CheckoutPage: React.FC = () => {
                       <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
                         <span className="flex items-center gap-1 font-mono text-[10px]">
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          Stripe Elements AES-256 GCM Tokenized
+                          Test payment form · no real charge
                         </span>
                         <span className="font-mono text-slate-400">pi_3P9x_test</span>
                       </div>
@@ -696,7 +750,7 @@ export const CheckoutPage: React.FC = () => {
                         <span className="px-2 py-0.5 bg-purple-200 text-purple-900 rounded text-[10px] font-bold">Klarna Pay in 4</span>
                       </div>
                       <p className="text-[11px] text-purple-800">
-                        First installment of ${(finalTotal / 4).toFixed(2)} charged today. Remaining payments scheduled automatically every 14 days. Zero APR.
+                        Demo installment preview only. No charge or payment schedule is created in Phase 1.
                       </p>
                     </div>
                   )}
@@ -710,7 +764,7 @@ export const CheckoutPage: React.FC = () => {
                           <span>Automated Security OTP Verification for COD</span>
                         </span>
                         <span className="px-2 py-0.5 bg-amber-200 text-amber-900 rounded text-[10px] font-mono font-bold">
-                          Anti-Fraud Guard
+                          UI-only demo OTP
                         </span>
                       </div>
 
@@ -771,7 +825,7 @@ export const CheckoutPage: React.FC = () => {
                             {isOtpVerified ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Phone Verified ✓</span>
+                                <span>Demo OTP accepted ✓</span>
                               </span>
                             ) : (
                               <span className="text-[11px] text-amber-800">
@@ -787,7 +841,7 @@ export const CheckoutPage: React.FC = () => {
                   {/* Primary Order Submission Button */}
                   <button
                     type="button"
-                    disabled={isSubmitting || (paymentMethod === 'cod' && !isOtpVerified)}
+                    disabled={isSubmitting || (paymentMethod === 'cod' && !isOtpVerified) || (['jazzcash', 'easypaisa', 'bank_transfer'].includes(paymentMethod) && paymentReference.trim().length < 4)}
                     onClick={handlePlaceOrder}
                     className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -801,7 +855,7 @@ export const CheckoutPage: React.FC = () => {
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-                        <span>Authorize Order &amp; Place Escrow (${finalTotal.toFixed(2)})</span>
+                        <span>{paymentMethod === 'cod' ? 'Confirm COD Order' : 'Place Demo Order'} (${finalTotal.toFixed(2)})</span>
                       </>
                     )}
                   </button>
@@ -927,7 +981,7 @@ export const CheckoutPage: React.FC = () => {
               <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
                 <div>
-                  <strong>NexMart Buyer Shield:</strong> Funds are locked in escrow and only released to sellers after postal confirmation.
+                  <strong>NexMart Buyer Shield:</strong> Phase 1 is a demo-safe checkout. Real escrow and provider verification require a future server-side integration.
                 </div>
               </div>
 

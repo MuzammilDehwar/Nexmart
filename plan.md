@@ -60,3 +60,23 @@ The archive already establishes the design direction, so no new visual direction
 - `npm run dev` for the managed preview on port 3000
 
 Firebase rules will be delivered as files and documented for manual publication; they will not be published automatically.
+
+## Approved Phase 1 extension — demo-safe growth and commerce layer
+
+The next phase is intentionally demo-safe: no live money movement, gateway API calls, or client-exposed AI secrets. The UI will simulate JazzCash, EasyPaisa, bank-transfer transaction verification, COD confirmation, SMS/WhatsApp events, AI recommendations, image matching, vendor chat, loyalty points, scratch cards, and referrals while preserving explicit test-mode labels. Real integrations will later attach to server-side functions and secrets without changing the customer-facing contracts.
+
+### New modules
+
+- `src/context/EngagementContext.tsx`: browser-local, demo-only rewards wallet, daily bonus, scratch-card claims, referral attribution, assistant history, visual-search history, and chat threads. It will expose clear demo-mode metadata and never be treated as authorization.
+- `src/components/phase1/Phase1CommerceTools.tsx`: recommendation assistant using product/search context, visual-search upload simulation, buyer/vendor chat widget, and rewards/referral panels. It keeps provider integration behind future adapter boundaries.
+
+### Integration decisions
+
+- Extend the existing order contract with `jazzcash`, `easypaisa`, and `bank_transfer` payment methods plus a non-sensitive demo payment reference; keep Firestore writes behind the existing sync gate and default-deny rules.
+- Keep current storefront and portals intact; add Phase 1 tools as responsive overlays/panels rather than duplicating the catalogue.
+- Add no client-side role escalation. Rewards, referrals, chat and assistant state are local demo state until trusted server-side ownership rules are added.
+- Keep the current SPA route manifest because Phase 1 tools are integrated into the storefront and checkout rather than new routes.
+
+### Validation workflow
+
+Run TypeScript diagnostics, production build, static Firestore rule checks, and emulator tests when available. Use one read-only implementation review before checkpointing. Re-publish only after the approved checkpoint is validated.
