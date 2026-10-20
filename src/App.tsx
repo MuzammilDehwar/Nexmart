@@ -36,7 +36,7 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState<'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema'>('mvp');
   const [hasCopied, setHasCopied] = useState(false);
   const { setOnNavigateToTab, currentView } = useCart();
-  const { role } = useAuth();
+  const { role, isSuperAdmin } = useAuth();
 
   React.useEffect(() => {
     // Wrap the setter so CartContext stores the callback instead of treating it as a state updater.
@@ -104,28 +104,30 @@ function MainApp() {
             </div>
           )}
 
-          {/* Protected Route: Vendor Central (Only Vendors and Admins) */}
+          {/* Protected Route: Vendor Central (Only Super Admin) */}
           {activeTab === 'vendor' && (
-            role === 'vendor' || role === 'admin' ? (
+            isSuperAdmin ? (
               <VendorPortal />
             ) : (
               <AccessGuard
                 requiredRole="vendor"
                 title="Vendor Central Access Restricted"
-                description="The Seller Dashboard and inventory management tools are exclusively accessible to verified merchant partners. Please authenticate with seller credentials or use the 1-click test persona."
+                description="The Seller Dashboard and inventory management tools are exclusively accessible to authorized accounts with Super Admin privileges."
+                onReturnHome={() => setActiveTab('customer')}
               />
             )
           )}
 
-          {/* Protected Route: Admin Tower (Only Super Admin) */}
+          {/* Protected Route: Admin Tower (Only grant access if user's authenticated role is 'Super Admin') */}
           {activeTab === 'admin' && (
-            role === 'admin' ? (
+            isSuperAdmin ? (
               <AdminPortal />
             ) : (
               <AccessGuard
                 requiredRole="admin"
                 title="Super Admin Governance Tower Restricted"
-                description="This control room contains sensitive financial take-rate parameters, Gross Merchandise Value (GMV) escrow ledgers, and merchant product catalog approvals. Super Admin privileges required."
+                description="Access to the NexMart Admin panel is strictly restricted. Only users whose authenticated role is 'Super Admin' are granted access to this control center."
+                onReturnHome={() => setActiveTab('customer')}
               />
             )
           )}
@@ -158,18 +160,22 @@ function MainApp() {
             >
               Customer View
             </button>
-            <button
-              onClick={() => setActiveTab('vendor')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Vendor Central
-            </button>
-            <button
-              onClick={() => setActiveTab('admin')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Admin Tower
-            </button>
+            {isSuperAdmin && (
+              <>
+                <button
+                  onClick={() => setActiveTab('vendor')}
+                  className="hover:text-slate-900 transition-colors"
+                >
+                  Vendor Central
+                </button>
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className="hover:text-slate-900 transition-colors"
+                >
+                  Admin Tower
+                </button>
+              </>
+            )}
             <button
               onClick={() => setActiveTab('schema')}
               className="hover:text-slate-900 transition-colors"

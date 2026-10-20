@@ -15,7 +15,7 @@ import {
   FirebaseUser 
 } from '../lib/firebase';
 
-export type UserRole = 'guest' | 'customer' | 'vendor' | 'admin';
+export type UserRole = 'guest' | 'customer' | 'vendor' | 'admin' | 'Super Admin';
 
 export interface User {
   id: string;
@@ -41,7 +41,7 @@ export interface VendorApplication {
   submittedAt: string;
 }
 
-export const PRESET_USERS: Record<Exclude<UserRole, 'guest'>, User> = {
+export const PRESET_USERS: Record<'customer' | 'vendor' | 'admin', User> = {
   customer: {
     id: 'usr-cust-01',
     name: 'Julian Vance',
@@ -84,6 +84,7 @@ interface AuthContextType {
   user: User | null;
   role: UserRole;
   isAuthenticated: boolean;
+  isSuperAdmin: boolean;
   isLoadingAuth: boolean;
   authError: string | null;
   isFirebaseConfigured: boolean;
@@ -156,7 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const claims = tokenResult.claims;
 
       // 1. Check server-issued Custom Claims (set exclusively by Admin SDK)
-      if (claims.admin === true || claims.role === 'admin') {
+      if (claims.admin === true || claims.role === 'admin' || claims.role === 'Super Admin' || claims.superAdmin === true) {
         return { role: 'admin' };
       }
       if (claims.vendor === true || claims.role === 'vendor') {
@@ -238,8 +239,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setRole(newRole);
     if (newRole === 'guest') {
       setUser(null);
+    } else if (newRole === 'admin' || (newRole as string) === 'Super Admin') {
+      setUser(PRESET_USERS.admin);
     } else {
-      setUser(PRESET_USERS[newRole]);
+      setUser(PRESET_USERS[newRole as 'customer' | 'vendor']);
     }
   };
 
@@ -479,7 +482,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (finalRole === 'guest') {
       setUser(null);
     } else {
-      const base = PRESET_USERS[finalRole];
+      const base = finalRole === 'Super Admin' || finalRole === 'admin' ? PRESET_USERS.admin : PRESET_USERS[finalRole];
       setUser({
         ...base,
         email: emailInput || base.email,
@@ -544,12 +547,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAuthModalOpen(true);
   };
 
+  const isSuperAdmin = Boolean(
+    (role === 'admin' || (role as string) === 'Super Admin' || user?.role === 'admin' || (user?.role as string) === 'Super Admin') &&
+    role !== 'guest' &&
+    user !== null
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         role,
         isAuthenticated: role !== 'guest' && user !== null,
+        isSuperAdmin,
         isLoadingAuth,
         authError,
         isFirebaseConfigured,

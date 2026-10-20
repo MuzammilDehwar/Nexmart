@@ -7,6 +7,7 @@ interface AccessGuardProps {
   title: string;
   description: string;
   onUnlocked?: () => void;
+  onReturnHome?: () => void;
 }
 
 export const AccessGuard: React.FC<AccessGuardProps> = ({
@@ -14,6 +15,7 @@ export const AccessGuard: React.FC<AccessGuardProps> = ({
   title,
   description,
   onUnlocked,
+  onReturnHome,
 }) => {
   const { role, user, switchRole, openAuthModalWithRole } = useAuth();
 
@@ -101,11 +103,21 @@ export const AccessGuard: React.FC<AccessGuardProps> = ({
             </button>
           </div>
 
-          {/* Credentials Alternative */}
+          {/* Credentials Alternative & Return Action */}
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
-            <span>
-              Have existing {roleTitle.toLowerCase()} login credentials?
-            </span>
+            <div className="flex items-center gap-3">
+              {onReturnHome && (
+                <button
+                  onClick={onReturnHome}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  &larr; Return to Storefront
+                </button>
+              )}
+              <span>
+                Have existing {roleTitle.toLowerCase()} login credentials?
+              </span>
+            </div>
             <button
               onClick={() => openAuthModalWithRole(requiredRole)}
               className="inline-flex items-center gap-1.5 font-bold text-slate-900 hover:text-amber-700 underline underline-offset-2"

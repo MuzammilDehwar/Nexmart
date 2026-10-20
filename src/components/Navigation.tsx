@@ -13,14 +13,15 @@ export const Navigation: React.FC<NavigationProps> = ({
   setActiveTab,
   onExportMarkdown
 }) => {
-  const { role, switchRole, user, setIsAuthModalOpen, setAuthModalMode, logout, isLoadingAuth } = useAuth();
+  const { role, switchRole, user, setIsAuthModalOpen, setAuthModalMode, logout, isLoadingAuth, isSuperAdmin } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Helper for role pill styling
   const getRoleBadge = (r: UserRole) => {
     switch (r) {
       case 'admin':
-        return { label: 'Admin', color: 'bg-purple-100 text-purple-900 border-purple-300' };
+      case 'Super Admin':
+        return { label: 'Super Admin', color: 'bg-purple-100 text-purple-900 border-purple-300' };
       case 'vendor':
         return { label: 'Seller', color: 'bg-amber-100 text-amber-900 border-amber-300' };
       case 'customer':
@@ -85,38 +86,31 @@ export const Navigation: React.FC<NavigationProps> = ({
           >
             Architecture Specs
           </button>
-          <button
-            onClick={() => setActiveTab('vendor')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'vendor'
-                ? 'text-slate-950 border-amber-500 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Vendor Central</span>
-            {role !== 'vendor' && role !== 'admin' && (
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded font-mono flex items-center gap-0.5" title="Vendor access restricted">
-                <Lock className="w-2.5 h-2.5 text-slate-400" />
-                <span>Seller</span>
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 flex items-center gap-1.5 ${
-              activeTab === 'admin'
-                ? 'text-slate-950 border-purple-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Admin Tower</span>
-            {role !== 'admin' && (
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded font-mono flex items-center gap-0.5" title="Super Admin required">
-                <Lock className="w-2.5 h-2.5 text-slate-400" />
-                <span>Admin</span>
-              </span>
-            )}
-          </button>
+          {/* Vendor Central & Admin Tower: strictly hidden from users without Super Admin roles */}
+          {isSuperAdmin && (
+            <>
+              <button
+                onClick={() => setActiveTab('vendor')}
+                className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 flex items-center gap-1.5 ${
+                  activeTab === 'vendor'
+                    ? 'text-slate-950 border-amber-500 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Vendor Central</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 flex items-center gap-1.5 ${
+                  activeTab === 'admin'
+                    ? 'text-slate-950 border-purple-600 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Admin Tower</span>
+              </button>
+            </>
+          )}
           <button
             onClick={() => setActiveTab('schema')}
             className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
@@ -369,22 +363,27 @@ export const Navigation: React.FC<NavigationProps> = ({
         >
           Blueprint
         </button>
-        <button
-          onClick={() => setActiveTab('vendor')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'vendor' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Vendor
-        </button>
-        <button
-          onClick={() => setActiveTab('admin')}
-          className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
-            activeTab === 'admin' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-600'
-          }`}
-        >
-          Admin
-        </button>
+        {/* Mobile Vendor & Admin Tabs: Strictly hidden from users without Super Admin roles */}
+        {isSuperAdmin && (
+          <>
+            <button
+              onClick={() => setActiveTab('vendor')}
+              className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
+                activeTab === 'vendor' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-600'
+              }`}
+            >
+              Vendor
+            </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
+                activeTab === 'admin' ? 'bg-purple-700 text-white font-bold' : 'text-slate-600'
+              }`}
+            >
+              Admin
+            </button>
+          </>
+        )}
         <button
           onClick={() => setActiveTab('schema')}
           className={`px-3 py-1.5 rounded-md whitespace-nowrap font-medium ${
