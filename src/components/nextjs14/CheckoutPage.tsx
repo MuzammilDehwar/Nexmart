@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useCart } from '../../context/CartContext';
+import { Order, useCart } from '../../context/CartContext';
 import { useEngagement } from '../../context/EngagementContext';
 import { 
   Check, 
@@ -39,8 +39,8 @@ export const CheckoutPage: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [orderNumber, setOrderNumber] = useState('');
-  const [createdOrder, setCreatedOrder] = useState<any | null>(null);
+  const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Step 1: Address Form State
   const [address, setAddress] = useState({
@@ -84,6 +84,8 @@ export const CheckoutPage: React.FC = () => {
   });
 
   const finalTotal = cartTotal;
+  const isAddressValid = [address.fullName, address.street, address.city, address.state, address.postalCode, address.phone].every((value) => value.trim().length > 0);
+  const needsPaymentReference = ['jazzcash', 'easypaisa', 'bank_transfer'].includes(paymentMethod);
 
   // Platform 5% commission math
   const commissionPercent = Math.round(marketplaceCommissionRate * 100);
@@ -123,12 +125,24 @@ export const CheckoutPage: React.FC = () => {
   };
 
   const handlePlaceOrder = () => {
+    if (cart.length === 0) {
+      setCheckoutError('Your cart is empty. Add at least one item before checkout.');
+      return;
+    }
+    if (!isAddressValid) {
+      setCheckoutError('Please complete your name, phone, and full delivery address before placing the order.');
+      setStep(1);
+      return;
+    }
     if (paymentMethod === 'cod' && !isOtpVerified) {
+      setCheckoutError('Complete the demo COD OTP step before placing the order.');
       return;
     }
-    if (['jazzcash', 'easypaisa', 'bank_transfer'].includes(paymentMethod) && paymentReference.trim().length < 4) {
+    if (needsPaymentReference && paymentReference.trim().length < 4) {
+      setCheckoutError('Enter a valid payment transaction/reference ID (at least 4 characters).');
       return;
     }
+    setCheckoutError(null);
 
     setIsSubmitting(true);
 
@@ -143,7 +157,6 @@ export const CheckoutPage: React.FC = () => {
             setIsSubmitting(false);
             setStripeProcessingStep(null);
             setIsCompleted(true);
-            setOrderNumber(order.id);
             setCreatedOrder(order);
             awardPurchasePoints(order.total);
           }, 600);
@@ -154,7 +167,6 @@ export const CheckoutPage: React.FC = () => {
         const order = placeOrder(address, paymentMethod, paymentReference.trim() || undefined);
         setIsSubmitting(false);
         setIsCompleted(true);
-        setOrderNumber(order.id);
         setCreatedOrder(order);
         awardPurchasePoints(order.total);
       }, 800);
@@ -361,6 +373,7 @@ export const CheckoutPage: React.FC = () => {
 
               {step === 1 ? (
                 <div className="space-y-4">
+                  {checkoutError && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">{checkoutError}</div>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div className="space-y-1">
                       <label className="font-semibold text-slate-700">Recipient Full Name</label>
@@ -425,7 +438,8 @@ export const CheckoutPage: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
+                    onClick={() => { if (!isAddressValid) { setCheckoutError('Please complete all required delivery fields.'); return; } setCheckoutError(null); setStep(2); }}
+                    disabled={cart.length === 0 || !isAddressValid}
                     className="mt-2 py-3 px-6 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
                   >
                     Continue to Delivery Options
@@ -554,6 +568,7 @@ export const CheckoutPage: React.FC = () => {
 
               {step === 3 ? (
                 <div className="space-y-5">
+                  {checkoutError && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">{checkoutError}</div>}
                   {/* Payment Methods */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-medium">
                     <button

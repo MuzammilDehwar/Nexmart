@@ -90,6 +90,10 @@ export const ProductDetailPage: React.FC = () => {
                 alt={product.title}
                 className="w-full h-full object-cover transition-all duration-300"
                 referrerPolicy="no-referrer"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = '/src/assets/images/hero_marketplace_showcase_1792380848955.jpg';
+                }}
               />
               <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-md text-xs font-bold text-slate-900 shadow-2xs">
                 Verified Artisan Hardware
@@ -108,7 +112,7 @@ export const ProductDetailPage: React.FC = () => {
                       : 'border-slate-200 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`Angle ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={img} alt={`Angle ${idx + 1}`} className="w-full h-full object-cover" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = '/src/assets/images/hero_marketplace_showcase_1792380848955.jpg'; }} />
                 </button>
               ))}
             </div>
@@ -306,7 +310,7 @@ export const ProductDetailPage: React.FC = () => {
               <div className="pt-4 border-t border-slate-100 space-y-2 text-xs text-slate-500">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Stripe Escrow: Merchant paid only after verified postal delivery</span>
+                  <span>Demo buyer protection preview; live escrow requires a server-side payment provider</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <RotateCcw className="w-4 h-4 text-blue-600 shrink-0" />

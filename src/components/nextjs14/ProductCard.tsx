@@ -64,7 +64,7 @@ interface ProductCardProps {
   onQuickView?: (product: ProductData) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardComponent: React.FC<ProductCardProps> = ({
   product,
   onAddToCart,
   onQuickView,
@@ -127,6 +127,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           alt={product.title}
           className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
           referrerPolicy="no-referrer"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = '/src/assets/images/hero_marketplace_showcase_1792380848955.jpg';
+          }}
         />
 
         {/* Badges */}
@@ -284,3 +288,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
+
+export const ProductCard = React.memo(ProductCardComponent);

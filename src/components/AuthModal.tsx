@@ -43,11 +43,11 @@ export const AuthModal: React.FC = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
+  // Pre-fill fields if user targeted a specific role
   useEffect(() => {
     if (targetProtectedRole && targetProtectedRole !== 'guest') {
       setSelectedRole(targetProtectedRole);
-      const preset = targetProtectedRole === 'Super Admin' ? PRESET_USERS.admin : PRESET_USERS[targetProtectedRole];
-      setEmail(preset.email);
+      setEmail(PRESET_USERS[targetProtectedRole].email);
       setPassword('password123');
     }
   }, [targetProtectedRole]);

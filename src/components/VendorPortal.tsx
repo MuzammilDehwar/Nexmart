@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useCart, OrderStatus } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
 import { ProductData, ProductVariantData } from './nextjs14/ProductCard';
 import { 
   TrendingUp, 
@@ -36,11 +35,6 @@ export const VendorPortal: React.FC = () => {
     setSelectedProductId, 
     onNavigateToTab 
   } = useCart();
-  const { isSuperAdmin } = useAuth();
-
-  if (!isSuperAdmin) {
-    return null;
-  }
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'add-product' | 'inventory'>('dashboard');
   const [selectedVendor, setSelectedVendor] = useState<string>('Lumina Audio Labs');
@@ -388,17 +382,15 @@ export const VendorPortal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {isSuperAdmin && (
-              <button
-                onClick={() => {
-                  if (onNavigateToTab) onNavigateToTab('admin');
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg font-bold transition-colors"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Review in Admin Tower</span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (onNavigateToTab) onNavigateToTab('admin');
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg font-bold transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Review in Admin Tower</span>
+            </button>
             <button
               onClick={() => handleViewInStorefront(createdProduct.id)}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold transition-colors"

@@ -94,7 +94,9 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow get, list: if isOrderCustomer(resource.data) || isOrderVendor(resource.data) || isAdmin();
+      // Full customer order documents are never exposed to vendors because they
+      // contain customer identity, totals, payment metadata, and other vendors' items.
+      allow get, list: if isOrderCustomer(resource.data) || isAdmin();
       allow create: if isSignedIn()
                     && request.resource.data.id == orderId
                     && request.resource.data.customerId == request.auth.uid
@@ -130,6 +132,16 @@ service cloud.firestore {
                       );
         allow delete: if isAdmin();
       }
+    }
+    match /vendor_orders/{vendorUid}/orders/{orderId} {
+      // A trusted server writes a projection containing only this vendor's package,
+      // fulfillment status, and payout fields. Vendors cannot create projections.
+      allow get, list: if isVerifiedVendor() && request.auth.uid == vendorUid;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isVerifiedVendor() && request.auth.uid == vendorUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'statusUpdatedAt', 'trackingNumber', 'courier', 'estimatedDelivery'
+        ]));
     }
 
     match /admins/{adminUid} {

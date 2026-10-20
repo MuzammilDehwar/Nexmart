@@ -145,11 +145,20 @@ function runVerification() {
   );
 
   assertRule(
-    'Order Reads Restricted to Owner, Vendor, and Admin',
+    'Full Order Reads Restricted to Customer and Admin',
     'Orders RBAC',
     ordersBlock.includes('resource.data.customerId == request.auth.uid') &&
-      ordersBlock.includes('isAdmin()'),
-    'Orders must only be visible to owning customer, admin, or associated vendors'
+      ordersBlock.includes('isAdmin()') &&
+      !ordersBlock.includes('isOrderVendor(resource.data)'),
+    'Full orders must only be visible to the owning customer or admin; vendors use projections'
+  );
+
+  assertRule(
+    'Vendor Order Projections Are Vendor-Scoped',
+    'Orders RBAC',
+    rulesContent.includes('match /vendor_orders/{vendorUid}/orders/{orderId}') &&
+      rulesContent.includes('request.auth.uid == vendorUid'),
+    'Vendors may only access their own sanitized order projections'
   );
 
   // 7. Verified Privilege Logic (Requirement 6)

@@ -41,11 +41,7 @@ export const AdminPortal: React.FC = () => {
     onNavigateToTab
   } = useCart();
 
-  const { vendorApplications: authApps, approveVendorApplication, isSuperAdmin } = useAuth();
-
-  if (!isSuperAdmin) {
-    return null;
-  }
+  const { vendorApplications: authApps, approveVendorApplication } = useAuth();
 
   const [productFilter, setProductFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [moderationToast, setModerationToast] = useState<{ message: string; type: 'success' | 'danger' } | null>(null);

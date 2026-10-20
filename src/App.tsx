@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider, useCart } from './context/CartContext';
+import { AppTab, CartProvider, useCart } from './context/CartContext';
 import { EngagementProvider } from './context/EngagementContext';
 import { Navigation } from './components/Navigation';
 import { AuthModal } from './components/AuthModal';
@@ -40,7 +40,7 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState<'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema'>('mvp');
   const [hasCopied, setHasCopied] = useState(false);
   const { setOnNavigateToTab, currentView } = useCart();
-  const { role, isSuperAdmin } = useAuth();
+  const { role } = useAuth();
 
   React.useEffect(() => {
     // Wrap the setter so CartContext stores the callback instead of treating it as a state updater.
@@ -89,7 +89,7 @@ function MainApp() {
 
           {activeTab === 'blueprint' && (
             <BlueprintView
-              onNavigateToPrototype={(tab) => setActiveTab(tab as any)}
+              onNavigateToPrototype={(tab) => setActiveTab(tab as AppTab)}
               onCopyMarkdown={handleCopyMarkdown}
               hasCopied={hasCopied}
             />
@@ -108,30 +108,28 @@ function MainApp() {
             </div>
           )}
 
-          {/* Protected Route: Vendor Central (Only Super Admin) */}
+          {/* Protected Route: Vendor Central (Only Vendors and Admins) */}
           {activeTab === 'vendor' && (
-            isSuperAdmin ? (
+            role === 'vendor' || role === 'admin' ? (
               <VendorPortal />
             ) : (
               <AccessGuard
                 requiredRole="vendor"
                 title="Vendor Central Access Restricted"
-                description="The Seller Dashboard and inventory management tools are exclusively accessible to authorized accounts with Super Admin privileges."
-                onReturnHome={() => setActiveTab('customer')}
+                description="The Seller Dashboard and inventory management tools are exclusively accessible to verified merchant partners. Please authenticate with seller credentials or use the 1-click test persona."
               />
             )
           )}
 
-          {/* Protected Route: Admin Tower (Only grant access if user's authenticated role is 'Super Admin') */}
+          {/* Protected Route: Admin Tower (Only Super Admin) */}
           {activeTab === 'admin' && (
-            isSuperAdmin ? (
+            role === 'admin' ? (
               <AdminPortal />
             ) : (
               <AccessGuard
                 requiredRole="admin"
                 title="Super Admin Governance Tower Restricted"
-                description="Access to the NexMart Admin panel is strictly restricted. Only users whose authenticated role is 'Super Admin' are granted access to this control center."
-                onReturnHome={() => setActiveTab('customer')}
+                description="This control room contains sensitive financial take-rate parameters, Gross Merchandise Value (GMV) escrow ledgers, and merchant product catalog approvals. Super Admin privileges required."
               />
             )
           )}
@@ -168,22 +166,18 @@ function MainApp() {
             >
               Customer View
             </button>
-            {isSuperAdmin && (
-              <>
-                <button
-                  onClick={() => setActiveTab('vendor')}
-                  className="hover:text-slate-900 transition-colors"
-                >
-                  Vendor Central
-                </button>
-                <button
-                  onClick={() => setActiveTab('admin')}
-                  className="hover:text-slate-900 transition-colors"
-                >
-                  Admin Tower
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => setActiveTab('vendor')}
+              className="hover:text-slate-900 transition-colors"
+            >
+              Vendor Central
+            </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className="hover:text-slate-900 transition-colors"
+            >
+              Admin Tower
+            </button>
             <button
               onClick={() => setActiveTab('schema')}
               className="hover:text-slate-900 transition-colors"

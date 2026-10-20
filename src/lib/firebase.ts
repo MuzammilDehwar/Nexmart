@@ -20,6 +20,7 @@ import {
   onSnapshot,
   query,
   where,
+  limit,
   orderBy,
   updateDoc
 } from 'firebase/firestore';
@@ -100,6 +101,7 @@ export {
   onSnapshot,
   query,
   where,
+  limit,
   orderBy,
   updateDoc
 };

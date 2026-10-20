@@ -11,12 +11,14 @@ import {
   onSnapshot,
   updateDoc,
   query,
-  where
+  where,
+  limit
 } from '../lib/firebase';
 
 const isFirestoreSyncEnabled = import.meta.env.VITE_FIREBASE_ENABLE_FIRESTORE_SYNC === 'true';
 
 export type OrderStatus = 'Ordered' | 'Packed' | 'Shipped' | 'Delivered';
+export type AppTab = 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema';
 
 export interface CartItem {
   product: ProductData;
@@ -88,8 +90,8 @@ interface CartContextType {
   lastCompletedOrderNumber: string | null;
   setLastCompletedOrderNumber: (num: string | null) => void;
   // Global tab navigation helper for vendor -> storefront jump
-  onNavigateToTab?: (tab: 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema') => void;
-  setOnNavigateToTab: (fn: (tab: 'mvp' | 'blueprint' | 'customer' | 'vendor' | 'admin' | 'schema') => void) => void;
+  onNavigateToTab?: (tab: AppTab) => void;
+  setOnNavigateToTab: (fn: (tab: AppTab) => void) => void;
   // Product Moderation & Governance
   approveProduct: (productId: string) => void;
   rejectProduct: (productId: string, reason?: string) => void;
@@ -266,7 +268,7 @@ const INITIAL_ORDERS: Order[] = [
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user: authUser, role: authRole, firebaseUser } = useAuth();
   const [products, setProducts] = useState<ProductData[]>(() => readStoredValue(STORAGE_KEYS.products, SAMPLE_NEXTJS_PRODUCTS));
-  const [navigateTabFn, setNavigateTabFn] = useState<((tab: any) => void) | undefined>(undefined);
+  const [navigateTabFn, setNavigateTabFn] = useState<((tab: AppTab) => void) | undefined>(undefined);
 
   // Restore demo cart if available; otherwise retain the original sample cart for first-time visitors.
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -370,10 +372,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       setOrderSyncState('loading');
       const ordersQuery = authRole === 'admin'
-        ? collection(db, 'orders')
+        ? query(collection(db, 'orders'), limit(100))
         : authRole === 'vendor'
-          ? query(collection(db, 'orders'), where('vendorUids', 'array-contains', firebaseUser.uid))
-          : query(collection(db, 'orders'), where('customerId', '==', firebaseUser.uid));
+          ? query(collection(db, 'vendor_orders', firebaseUser.uid, 'orders'), limit(100))
+          : query(collection(db, 'orders'), where('customerId', '==', firebaseUser.uid), limit(50));
       unsubOrders = onSnapshot(
         ordersQuery,
         (snapshot) => {

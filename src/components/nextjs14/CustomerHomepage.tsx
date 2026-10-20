@@ -22,11 +22,8 @@ import {
 import { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
 import { RewardsReferralPanel, VisualSearchPanel } from '../phase1/Phase1CommerceTools';
 export { SAMPLE_NEXTJS_PRODUCTS } from '../../data/sampleProducts';
-import { useAuth } from '../../context/AuthContext';
-
 export const CustomerHomepage: React.FC = () => {
   const { products, addToCart, setIsCartDrawerOpen, cartCount, setCurrentView, setSelectedProductId, orders, onNavigateToTab, productSyncState, orderSyncState } = useCart();
-  const { isSuperAdmin } = useAuth();
   
   // Search & Category state
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -315,14 +312,12 @@ export const CustomerHomepage: React.FC = () => {
               >
                 {showPending ? 'Hide Unapproved Items' : 'Preview Unapproved Items'}
               </button>
-              {isSuperAdmin && (
-                <button
-                  onClick={() => onNavigateToTab && onNavigateToTab('admin')}
-                  className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[11px] font-bold transition-colors shadow-2xs"
-                >
-                  Open Admin Tower &rarr;
-                </button>
-              )}
+              <button
+                onClick={() => onNavigateToTab && onNavigateToTab('admin')}
+                className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-[11px] font-bold transition-colors shadow-2xs"
+              >
+                Open Admin Tower &rarr;
+              </button>
             </div>
           </div>
         )}

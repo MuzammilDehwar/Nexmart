@@ -36,7 +36,7 @@ export const CartDrawer: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/50 backdrop-blur-xs flex justify-end">
-      <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col justify-between border-l border-slate-200">
+      <div className="w-full sm:max-w-lg bg-white h-full max-h-[100dvh] shadow-2xl flex flex-col justify-between border-l border-slate-200">
         
         {/* Drawer Header */}
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
@@ -125,6 +125,10 @@ export const CartDrawer: React.FC = () => {
                         alt={item.product.title}
                         className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0 bg-white"
                         referrerPolicy="no-referrer"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = '/src/assets/images/hero_marketplace_showcase_1792380848955.jpg';
+                        }}
                       />
 
                       <div className="flex-1 min-w-0 space-y-1">
@@ -222,9 +226,9 @@ export const CartDrawer: React.FC = () => {
             </button>
 
             <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 pt-1">
-              <span>Stripe 256-bit Encryption</span>
+              <span>Demo checkout</span>
               <span>·</span>
-              <span>Escrow Protected</span>
+              <span>Provider pending</span>
               <span>·</span>
               <span>30-Day Returns</span>
             </div>

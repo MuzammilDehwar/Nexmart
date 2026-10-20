@@ -15,7 +15,7 @@ import {
   FirebaseUser 
 } from '../lib/firebase';
 
-export type UserRole = 'guest' | 'customer' | 'vendor' | 'admin' | 'Super Admin';
+export type UserRole = 'guest' | 'customer' | 'vendor' | 'admin';
 
 export interface User {
   id: string;
@@ -41,7 +41,7 @@ export interface VendorApplication {
   submittedAt: string;
 }
 
-export const PRESET_USERS: Record<'customer' | 'vendor' | 'admin', User> = {
+export const PRESET_USERS: Record<Exclude<UserRole, 'guest'>, User> = {
   customer: {
     id: 'usr-cust-01',
     name: 'Julian Vance',
@@ -78,13 +78,16 @@ export const PRESET_USERS: Record<'customer' | 'vendor' | 'admin', User> = {
 
 const VENDOR_APPLICATIONS_KEY = 'nexmart_vendor_applications_v1';
 const APPROVED_VENDORS_KEY = 'nexmart_approved_vendors_v1';
+const firebaseErrorCode = (error: unknown): string | undefined =>
+  typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : undefined;
+const firebaseErrorMessage = (error: unknown): string | undefined =>
+  typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string' ? error.message : undefined;
 
 // Real privileged roles come from Firebase Custom Claims or admin-managed records in Firestore rules.
 interface AuthContextType {
   user: User | null;
   role: UserRole;
   isAuthenticated: boolean;
-  isSuperAdmin: boolean;
   isLoadingAuth: boolean;
   authError: string | null;
   isFirebaseConfigured: boolean;
@@ -157,7 +160,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const claims = tokenResult.claims;
 
       // 1. Check server-issued Custom Claims (set exclusively by Admin SDK)
-      if (claims.admin === true || claims.role === 'admin' || claims.role === 'Super Admin' || claims.superAdmin === true) {
+      if (claims.admin === true || claims.role === 'admin') {
         return { role: 'admin' };
       }
       if (claims.vendor === true || claims.role === 'vendor') {
@@ -239,10 +242,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setRole(newRole);
     if (newRole === 'guest') {
       setUser(null);
-    } else if (newRole === 'admin' || (newRole as string) === 'Super Admin') {
-      setUser(PRESET_USERS.admin);
     } else {
-      setUser(PRESET_USERS[newRole as 'customer' | 'vendor']);
+      setUser(PRESET_USERS[newRole]);
     }
   };
 
@@ -297,19 +298,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         emailVerified: fbUser.emailVerified
       });
       setIsAuthModalOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Firebase signInWithEmailAndPassword error:', err);
       let message = 'Failed to sign in. Please check your credentials.';
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+      const code = firebaseErrorCode(err);
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
         message = 'Invalid email or password. Please verify your credentials or register a new account.';
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (code === 'auth/invalid-email') {
         message = 'Please provide a valid email address.';
-      } else if (err.code === 'auth/too-many-requests') {
+      } else if (code === 'auth/too-many-requests') {
         message = 'Access temporarily restricted due to many failed attempts. Please try again later.';
-      } else if (err.code === 'auth/network-request-failed') {
+      } else if (code === 'auth/network-request-failed') {
         message = 'Network error. Please check your internet connection.';
-      } else if (err.message) {
-        message = err.message;
+      } else {
+        message = firebaseErrorMessage(err) || message;
       }
       setAuthError(message);
       throw new Error(message);
@@ -438,19 +440,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setIsAuthModalOpen(false);
       return { pendingApproval, message: statusMessage };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Firebase createUserWithEmailAndPassword error:', err);
       let message = 'Failed to register account.';
-      if (err.code === 'auth/email-already-in-use') {
+      const code = firebaseErrorCode(err);
+      if (code === 'auth/email-already-in-use') {
         message = 'An account with this email address already exists. Please sign in instead.';
-      } else if (err.code === 'auth/weak-password') {
+      } else if (code === 'auth/weak-password') {
         message = 'Password is too weak. Please choose a password with at least 6 characters.';
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (code === 'auth/invalid-email') {
         message = 'Please provide a valid email address.';
-      } else if (err.code === 'auth/operation-not-allowed') {
+      } else if (code === 'auth/operation-not-allowed') {
         message = 'Email/Password sign-in is not enabled in Firebase Console. Please enable it in Firebase Authentication settings.';
-      } else if (err.message) {
-        message = err.message;
+      } else {
+        message = firebaseErrorMessage(err) || message;
       }
       setAuthError(message);
       throw new Error(message);
@@ -482,7 +485,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (finalRole === 'guest') {
       setUser(null);
     } else {
-      const base = finalRole === 'Super Admin' || finalRole === 'admin' ? PRESET_USERS.admin : PRESET_USERS[finalRole];
+      const base = PRESET_USERS[finalRole];
       setUser({
         ...base,
         email: emailInput || base.email,
@@ -547,19 +550,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAuthModalOpen(true);
   };
 
-  const isSuperAdmin = Boolean(
-    (role === 'admin' || (role as string) === 'Super Admin' || user?.role === 'admin' || (user?.role as string) === 'Super Admin') &&
-    role !== 'guest' &&
-    user !== null
-  );
-
   return (
     <AuthContext.Provider
       value={{
         user,
         role,
         isAuthenticated: role !== 'guest' && user !== null,
-        isSuperAdmin,
         isLoadingAuth,
         authError,
         isFirebaseConfigured,
